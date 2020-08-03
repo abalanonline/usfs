@@ -19,10 +19,7 @@ package ab;
 import lombok.SneakyThrows;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.FtpServerFactory;
-import org.apache.ftpserver.usermanager.PropertiesUserManagerFactory;
 import org.springframework.stereotype.Service;
-
-import java.io.File;
 
 @Service
 public class USFSFtpServerFactory {
@@ -30,15 +27,9 @@ public class USFSFtpServerFactory {
   @SneakyThrows
   public USFSFtpServerFactory() {
     FtpServerFactory ftpServerFactory = new FtpServerFactory();
-    //ListenerFactory listenerFactory = new ListenerFactory();
-    //listenerFactory.setPort(2221);
-    //ftpServerFactory.addListener("default", listenerFactory.createListener());
-
-    PropertiesUserManagerFactory userManagerFactory = new PropertiesUserManagerFactory();
-    userManagerFactory.setFile(new File("anonymous.properties"));
-    ftpServerFactory.setUserManager(userManagerFactory.createUserManager());
+    NullUser.MANAGER.setHomeDirectory("target");
+    ftpServerFactory.setUserManager(NullUser.MANAGER);
     ftpServerFactory.setFileSystem(new USFSFileSystemFactory());
-
     FtpServer ftpServer = ftpServerFactory.createServer();
     ftpServer.start();
   }
