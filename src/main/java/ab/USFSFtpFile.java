@@ -26,13 +26,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -43,7 +40,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class USFSFtpFile implements FtpFile {
@@ -71,19 +67,10 @@ public class USFSFtpFile implements FtpFile {
     return Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(s));
   }
 
-  @SneakyThrows
-  public static UUID stringToSha256Uuid(String s) {
-    byte[] digest = MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8));
-    ByteBuffer byteBuffer = ByteBuffer.wrap(digest);
-    long mostSigBits = byteBuffer.getLong();
-    long leastSigBits = byteBuffer.getLong();
-    return new UUID(mostSigBits, leastSigBits);
-  }
-
   private static int[] pathToId(String path) {
     if (path.length() == 0) return new int[0];
     return Arrays.stream(path.split("/"))
-        .mapToInt(s -> Concept.USFS.getUnsignedShort(s) & 0xFFFE).toArray();
+        .mapToInt(s -> Concept.USFS.getUnsignedShort(s) & 0xFFFE).toArray(); // v02
   }
 
   public USFSFtpFile(Path path) {
@@ -232,7 +219,7 @@ public class USFSFtpFile implements FtpFile {
 
   public Path getInternalPath(boolean isHead) {
     int[] internalId = pathToId(getRelativePath());
-    if (isHead && internalId.length > 0) internalId[internalId.length - 1] |= 0x0001;
+    if (isHead && internalId.length > 0) internalId[internalId.length - 1] |= 0x0001; // v02
     String internalPath = Arrays.stream(internalId).mapToObj(i -> String.format("%05d", i)).collect(Collectors.joining("/"));
     return MOUNTED_FOLDER.resolve(internalPath);
   }

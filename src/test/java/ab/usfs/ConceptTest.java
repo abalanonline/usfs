@@ -22,6 +22,7 @@ import java.security.Security;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class ConceptTest {
 
@@ -38,7 +39,7 @@ public class ConceptTest {
   }
 
   @Test
-  public void stringToSha256Uuid() {
+  public void testVectors() {
     assertEquals("d41d8cd98f00b204e9800998ecf8427e", testMD5("")); // wikipedia/MD5
     assertEquals("9e107d9d372bb6826bd81d3542a419d6", testMD5("The quick brown fox jumps over the lazy dog"));
     assertEquals("900150983cd24fb0d6963f7d28e17f72", testMD5("abc")); // rfc1321
@@ -56,10 +57,12 @@ public class ConceptTest {
     assertEquals("32D10C7B8CF96570CA04CE37F2A19D84240D3A89", testSHA1("abcdefghijklmnopqrstuvwxyz").toUpperCase());
 
     assertEquals("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", testSHA256("")); // wikipedia/SHA-2
-    // e3b0 give USFS short = 58288, octal 161660
+    assertEquals(0xe3b0, Concept.USFS.getUnsignedShort(""));
+    assertEquals(58288, Concept.USFS.getUnsignedShort("")); // e3b0 give USFS short = 58288, octal 161660
     // https://www.di-mgt.com.au/sha_testvectors.html
     assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", testSHA256("abc"));
-    // ba78 give USFS short = 47736, octal 135170
+    assertEquals(0xba78, Concept.USFS.getUnsignedShort("abc"));
+    assertEquals(47736, Concept.USFS.getUnsignedShort("abc")); // ba78 give USFS short = 47736, octal 135170
     // NESSIE project https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/sha/Sha-2-256.unverified.test-vectors
     assertEquals("CA978112CA1BBDCAFAC231B39A23DC4DA786EFF8147C4E72B9807785AFEE48BB",
         testSHA256("a").toUpperCase());
@@ -111,4 +114,12 @@ public class ConceptTest {
     // SHA-512 (2.16.840.1.101.3.4.2.3, OID.2.16.840.1.101.3.4.2.3)
   }
 
+  @Test
+  public void testMeta() {
+    assertEquals("65535", Concept.v02Meta("65534"));
+    assertEquals("/000000/177777", Concept.v02Meta("/000000/177776"));
+    assertNull(Concept.v02Meta(null));
+    assertNull(Concept.v02Meta("/0000a000"));
+    assertNull(Concept.v02Meta("12345"));
+  }
 }

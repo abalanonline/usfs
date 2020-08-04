@@ -20,11 +20,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.UUID;
 import java.util.function.Function;
 
 public class USFSFtpFileTest {
@@ -35,14 +33,6 @@ public class USFSFtpFileTest {
         DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(l), ZoneOffset.UTC)); // RFC 7231,7232
     Function<String, Long> rfcToMs = s ->
         Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(s)).toEpochMilli(); // RFC 7231,7232
-//    Function<Long, String> msToRfc = l ->
-//        DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(l), ZoneOffset.UTC)); // RFC 7231,7232
-//    Function<String, Long> rfcToMs = s ->
-//        Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(s)).toEpochMilli(); // RFC 7231,7232
-    //Instant.now().toString();
-    final UUID uuid = USFSFtpFile.stringToSha256Uuid("a");
-    Assert.assertEquals("ca978112-ca1b-bdca-fac2-31b39a23dc4d", uuid.toString().toLowerCase());
-    Assert.assertEquals(0xca97, (int) (uuid.getMostSignificantBits() >> 48) & 0xFFFF);
     Assert.assertEquals("Tue, 15 Nov 1994 12:45:26 GMT", msToRfc.apply(784903526000L)); // rfc7232
     //Assert.assertEquals("Sun, 06 Nov 1994 08:49:37 GMT", msToRfc.apply(784111777000L)); // rfc7231
     Assert.assertEquals(784111777000L, (long) rfcToMs.apply("Sun, 06 Nov 1994 08:49:37 GMT"));

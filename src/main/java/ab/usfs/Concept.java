@@ -41,6 +41,17 @@ public class Concept {
   private final int stringBaseSize;
   private final String digestAlgorithm;
 
+  /**
+   * Generate meta name for USFS file name.
+   * @param fileName
+   * @return null if this file name cannot have meta
+   */
+  public static String v02Meta(String fileName) {
+    if ((fileName == null) || (!fileName.matches(".*\\d\\d\\d\\d[02468]"))) return null;
+    int lastDigit = Integer.parseInt(fileName.substring(fileName.length() - 1));
+    return fileName.substring(0, fileName.length() - 1) + (lastDigit + 1);
+  }
+
   public static String toLowercaseHexadecimal(byte[] bytes) {
     return IntStream.range(0, bytes.length).map(i -> bytes[i] & 0xFF).mapToObj(b -> String.format("%02x", b))
         .collect(Collectors.joining());
@@ -48,7 +59,7 @@ public class Concept {
 
   public byte[] getBitHash(String s) {
     try {
-      return MessageDigest.getInstance(digestAlgorithm).digest(s.getBytes(CHARSET));
+      return MessageDigest.getInstance(digestAlgorithm).digest(s.getBytes(CHARSET)); // unique MessageDigest.getInstance
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException(e); // required to be supported
     }
@@ -65,22 +76,17 @@ public class Concept {
     return bigInteger;
   }
 
-  public int getUnsignedShort(String s) {
-    return getStringHash(s).intValue();
-  }
-
   public UUID stringToUuid(String s) {
-    final MessageDigest messageDigestInstance;
-    try {
-      messageDigestInstance = MessageDigest.getInstance(digestAlgorithm);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException(e); // required to be supported
-    }
-    byte[] digest = messageDigestInstance.digest(s.getBytes(CHARSET));
+    byte[] digest = getBitHash(s);
     ByteBuffer byteBuffer = ByteBuffer.wrap(digest);
     long mostSigBits = byteBuffer.getLong();
     long leastSigBits = byteBuffer.getLong();
     return new UUID(mostSigBits, leastSigBits);
+  }
+
+  public int getUnsignedShort(String s) {
+    byte[] b = getBitHash(s);
+    return ((b[0] & 0xFF) << 8) | (b[1] & 0xFF); // eww, ByteBuffer was better
   }
 
 }
