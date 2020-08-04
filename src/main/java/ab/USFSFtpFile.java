@@ -16,6 +16,7 @@
 
 package ab;
 
+import ab.usfs.Concept;
 import lombok.SneakyThrows;
 import org.apache.ftpserver.ftplet.FtpFile;
 
@@ -82,7 +83,7 @@ public class USFSFtpFile implements FtpFile {
   private static int[] pathToId(String path) {
     if (path.length() == 0) return new int[0];
     return Arrays.stream(path.split("/"))
-        .mapToInt(s -> (int) (stringToSha256Uuid(s).getMostSignificantBits() >> 48) & 0xFFFE).toArray();
+        .mapToInt(s -> Concept.USFS.getUnsignedShort(s) & 0xFFFE).toArray();
   }
 
   public USFSFtpFile(Path path) {
