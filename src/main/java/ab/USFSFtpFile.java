@@ -134,6 +134,7 @@ public class USFSFtpFile implements FtpFile {
 
   @Override
   public boolean isRemovable() {
+    // remove - old name for delete
     log.info("isRemovable " + realPath);
     return true;
   }
@@ -141,19 +142,19 @@ public class USFSFtpFile implements FtpFile {
   @Override
   public String getOwnerName() {
     log.info("getOwnerName " + realPath);
-    throw new IllegalAccessError();
+    return "";
   }
 
   @Override
   public String getGroupName() {
     log.info("getGroupName " + realPath);
-    throw new IllegalAccessError();
+    return "";
   }
 
   @Override
   public int getLinkCount() {
     log.info("getLinkCount " + realPath);
-    throw new IllegalAccessError();
+    return body().isDirectory() ? 3 : 1;
   }
 
   @SneakyThrows
@@ -178,8 +179,9 @@ public class USFSFtpFile implements FtpFile {
 
   @Override
   public Object getPhysicalFile() {
-    log.info("getPhysicalFile " + realPath);
-    throw new IllegalAccessError();
+    // there is no physical file, what should we return? null or exception?
+    log.error("getPhysicalFile " + realPath);
+    return null;
   }
 
   @Override
@@ -228,8 +230,9 @@ public class USFSFtpFile implements FtpFile {
 
   @Override
   public boolean move(FtpFile ftpFile) {
-    log.info("move " + realPath);
-    throw new IllegalAccessError();
+    // this thing is not going to be supported
+    log.error("move " + realPath);
+    return false;
   }
 
   @SneakyThrows
