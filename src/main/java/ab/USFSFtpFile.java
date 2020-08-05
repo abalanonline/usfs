@@ -18,8 +18,10 @@ package ab;
 
 import ab.usfs.Concept;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ftpserver.ftplet.FtpFile;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -40,6 +42,7 @@ import java.util.Properties;
 import static ab.usfs.Concept.fromInstantToRfc;
 import static ab.usfs.Concept.fromRfcToInstant;
 
+@Slf4j
 public class USFSFtpFile implements FtpFile {
 
   public static final Path ROOT_FOLDER = Paths.get("/");
@@ -50,8 +53,9 @@ public class USFSFtpFile implements FtpFile {
 
   public static final boolean UNIX_FOLDER_SEPARATOR = FOLDER_SEPARATOR == '/';
 
-  private final Path absoluteNormalizedPath;
-
+  private final Path windowsPath;
+  private final String realPath;
+  private final String realFileName;
   private final String usfsPath;
 
   private static String toUnixPath(Path path) {
@@ -62,102 +66,130 @@ public class USFSFtpFile implements FtpFile {
   public USFSFtpFile(Path path) {
     // TODO: 2020-08-04 path validation
     if (path.isAbsolute()) throw new IllegalStateException();
-    this.absoluteNormalizedPath = path.normalize();
-    usfsPath = Concept.fromUnixPathToUsfsPath(toUnixPath(absoluteNormalizedPath));
+    windowsPath = path.normalize();
+    Path windowsFileName = windowsPath.getFileName();
+    realPath = toUnixPath(windowsPath);
+    realFileName = windowsFileName == null ? null : windowsFileName.toString();
+    usfsPath = Concept.fromUnixPathToUsfsPath(realPath);
+  }
+
+
+  public File body() {
+    return new File(MOUNTED_FOLDER_PREFIX + usfsPath);
+    //return Paths.get(MOUNTED_FOLDER_PREFIX + usfsPath);
+    // TODO: 2020-08-04 use NIO
+  }
+
+  public File head() {
+    return new File(Concept.v02Meta(MOUNTED_FOLDER_PREFIX + usfsPath));
   }
 
   @Override
   public String getAbsolutePath() {
-    return toUnixPath(absoluteNormalizedPath);
+    log.info("getAbsolutePath " + realPath);
+    return realPath;
   }
 
   @Override
   public String getName() {
-    return absoluteNormalizedPath.getFileName().toString();
+    log.info("getName " + realPath);
+    return realFileName;
   }
 
   @Override
   public boolean isHidden() {
+    log.info("isHidden " + realPath);
     return false;
   }
 
   @Override
   public boolean isDirectory() {
-    return getInternalPath().toFile().isDirectory();
+    log.info("isDirectory " + realPath);
+    return body().isDirectory();
   }
 
   @Override
   public boolean isFile() {
-    return getInternalPath().toFile().isFile();
-    //if (getRelativePath().length() == 0) return false;
-    //return ftpFile.isFile();
-    //throw new IllegalAccessError();
+    log.info("isFile " + realPath);
+    return body().isFile();
   }
 
   @Override
   public boolean doesExist() {
-    return getInternalPath().toFile().exists();
+    log.info("doesExist " + realPath);
+    return body().exists();
   }
 
   @Override
   public boolean isReadable() {
-    return getInternalPath().toFile().canRead();
+    log.info("isReadable " + realPath);
+    return body().canRead();
   }
 
   @Override
   public boolean isWritable() {
+    log.info("isWritable " + realPath);
     return true;
   }
 
   @Override
   public boolean isRemovable() {
+    log.info("isRemovable " + realPath);
     return true;
   }
 
   @Override
   public String getOwnerName() {
+    log.info("getOwnerName " + realPath);
     throw new IllegalAccessError();
   }
 
   @Override
   public String getGroupName() {
+    log.info("getGroupName " + realPath);
     throw new IllegalAccessError();
   }
 
   @Override
   public int getLinkCount() {
+    log.info("getLinkCount " + realPath);
     throw new IllegalAccessError();
   }
 
   @SneakyThrows
   @Override
   public long getLastModified() {
+    log.info("getLastModified " + realPath);
     return fromRfcToInstant(getHeadProperties().getProperty("Last-Modified")).toEpochMilli();
   }
 
   @Override
   public boolean setLastModified(long ms) {
+    log.info("setLastModified " + realPath);
     updateHead("Last-Modified", fromInstantToRfc(Instant.ofEpochMilli(ms)));
     return true;
   }
 
   @Override
   public long getSize() {
-    return getInternalPath().toFile().length();
+    log.info("getSize " + realPath);
+    return body().length();
   }
 
   @Override
   public Object getPhysicalFile() {
+    log.info("getPhysicalFile " + realPath);
     throw new IllegalAccessError();
   }
 
   @Override
   public boolean mkdir() {
+    log.info("mkdir " + realPath);
     updateHead(
-        "FileName", absoluteNormalizedPath.getFileName().toString(),
+        "FileName", realFileName,
         "IsFolder", "true",
         "Last-Modified", fromInstantToRfc(Instant.now()));
-    return getInternalPath().toFile().mkdir();
+    return body().mkdir();
   }
 
   @SneakyThrows
@@ -173,7 +205,7 @@ public class USFSFtpFile implements FtpFile {
     for (int i = 0; i < args.length; i += 2) {
       properties.setProperty(args[i], args[i+1]);
     }
-    try (FileOutputStream stream = new FileOutputStream(getInternalPath(true).toFile())) {
+    try (FileOutputStream stream = new FileOutputStream(head())) {
       properties.store(stream, "file system of the year"); // watch and learn
     }
     //list.add(new USFSFtpFile(path.resolve(properties.getProperty("FileName")), null));
@@ -181,7 +213,7 @@ public class USFSFtpFile implements FtpFile {
 
   private Properties getHeadProperties() throws IOException {
     final Properties properties = new Properties();
-    try (FileInputStream stream = new FileInputStream(getInternalPath(true).toFile())) {
+    try (FileInputStream stream = new FileInputStream(head())) {
       properties.load(stream);
     }
     return properties;
@@ -189,30 +221,22 @@ public class USFSFtpFile implements FtpFile {
 
   @Override
   public boolean delete() {
-    final boolean h = getInternalPath(true).toFile().delete(); // head
-    return getInternalPath().toFile().delete(); // body
+    log.info("delete " + realPath);
+    final boolean h = head().delete(); // head
+    return body().delete(); // body
   }
 
   @Override
   public boolean move(FtpFile ftpFile) {
+    log.info("move " + realPath);
     throw new IllegalAccessError();
-  }
-
-  // usfsFilePath = target/47736
-  // usfsMetaPath = target/47737
-  public Path getInternalPath(boolean isHead) {
-    String path = MOUNTED_FOLDER_PREFIX + usfsPath;
-    return Paths.get(isHead ? Concept.v02Meta(path) : path);
-  }
-
-  public Path getInternalPath() {
-    return getInternalPath(false);
   }
 
   @SneakyThrows
   @Override
   public List<? extends FtpFile> listFiles() {
-    Path internalFolder = getInternalPath();
+    log.info("listFiles " + realPath);
+    Path internalFolder = body().toPath();
     Map<Integer, Integer> internalFiles = new HashMap<>();
     try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(internalFolder, "[0-6][0-9][0-9][0-9][0-9]")) {
       for (Path path : directoryStream) {
@@ -230,18 +254,19 @@ public class USFSFtpFile implements FtpFile {
       try (FileInputStream stream = new FileInputStream(path1.toFile())) {
         properties.load(stream);
       }
-      list.add(new USFSFtpFile(absoluteNormalizedPath.resolve(properties.getProperty("FileName"))));
+      list.add(new USFSFtpFile(windowsPath.resolve(properties.getProperty("FileName"))));
     }
     return list;
   }
 
   @Override
   public OutputStream createOutputStream(long offset) throws IOException {
+    log.info("createOutputStream " + realPath);
     updateHead(
-        "FileName", absoluteNormalizedPath.getFileName().toString(),
+        "FileName", realFileName,
         "IsFolder", "false",
         "Last-Modified", fromInstantToRfc(Instant.now()));
-    final RandomAccessFile randomAccessFile = new RandomAccessFile(getInternalPath().toFile(), "rw");
+    final RandomAccessFile randomAccessFile = new RandomAccessFile(body(), "rw");
     randomAccessFile.setLength(offset);
     randomAccessFile.seek(offset);
     return new FileOutputStream(randomAccessFile.getFD()) {
@@ -255,7 +280,8 @@ public class USFSFtpFile implements FtpFile {
 
   @Override
   public InputStream createInputStream(long offset) throws IOException {
-    final RandomAccessFile randomAccessFile = new RandomAccessFile(getInternalPath().toFile(), "r");
+    log.info("createInputStream " + realPath);
+    final RandomAccessFile randomAccessFile = new RandomAccessFile(body(), "r");
     randomAccessFile.seek(offset);
     return new FileInputStream(randomAccessFile.getFD()) {
       @Override

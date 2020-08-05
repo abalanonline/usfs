@@ -37,11 +37,14 @@ import java.util.stream.IntStream;
 @Getter
 @AllArgsConstructor
 public class Concept {
-  public static final Charset CHARSET = StandardCharsets.UTF_8;
+
+  public static final Concept USFS = new Concept(Short.SIZE, 3, "SHA-256");
+
   public static final Concept MD5 = new Concept(128, 4, "MD5");
   public static final Concept SHA1 = new Concept(160, 4, "SHA-1");
   public static final Concept SHA256 = new Concept(256, 4, "SHA-256");
-  public static final Concept USFS = new Concept(16, 3, SHA256.digestAlgorithm);
+
+  public static final Charset CHARSET = StandardCharsets.UTF_8;
   private final int digestSize;
   private final int stringBaseSize;
   private final String digestAlgorithm;

@@ -47,8 +47,10 @@ public class USFSFileSystemFactory implements FileSystemFactory, FileSystemView 
 
   @Override
   public boolean changeWorkingDirectory(String s) throws FtpException {
-    currentFolder = currentFolder.resolve(s);
-    return true;
+    Path path = currentFolder.resolve(s);
+    boolean canChange = new USFSFtpFile(path).isDirectory();
+    if (canChange) currentFolder = path;
+    return canChange;
   }
 
   @Override
