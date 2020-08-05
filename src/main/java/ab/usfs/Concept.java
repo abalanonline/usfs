@@ -25,6 +25,11 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -50,6 +55,25 @@ public class Concept {
     if ((fileName == null) || (!fileName.matches(".*\\d\\d\\d\\d[02468]"))) return null;
     int lastDigit = Integer.parseInt(fileName.substring(fileName.length() - 1));
     return fileName.substring(0, fileName.length() - 1) + (lastDigit + 1);
+  }
+
+  public static String fromUnixPathToUsfsPath(String unixPath) {
+    // TODO: 2020-08-04 validation, slash trimming, dots in path
+    while (unixPath.endsWith("/")) unixPath = unixPath.substring(0, unixPath.length() - 1);
+    final int[] usfsShorts = Arrays.stream(unixPath.split("/"))
+        .mapToInt(s -> Concept.USFS.getUnsignedShort(s) & 0xFFFE).toArray(); // v02
+    if (usfsShorts[0] != 0xe3b0) throw new IllegalAccessError();
+    String usfsFilePath = Arrays.stream(usfsShorts).mapToObj(i -> String.format("%05d", i)).collect(Collectors.joining("/"));
+    return usfsFilePath.substring(5); // FIXME: 2020-08-04 root folder don't have meta
+    // Where is metadata for root folder?
+  }
+
+  public static String fromInstantToRfc(Instant instant) {
+    return DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.ofInstant(instant, ZoneOffset.UTC));
+  }
+
+  public static Instant fromRfcToInstant(String s) {
+    return Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(s));
   }
 
   public static String toLowercaseHexadecimal(byte[] bytes) {

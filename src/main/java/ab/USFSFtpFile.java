@@ -31,68 +31,49 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
+
+import static ab.usfs.Concept.fromInstantToRfc;
+import static ab.usfs.Concept.fromRfcToInstant;
 
 public class USFSFtpFile implements FtpFile {
 
   public static final Path ROOT_FOLDER = Paths.get("/");
 
-  public static final Path MOUNTED_FOLDER = Paths.get("target");
+  public static final String MOUNTED_FOLDER_PREFIX = "target";
 
   public static final char FOLDER_SEPARATOR = ROOT_FOLDER.toString().charAt(0);
 
   public static final boolean UNIX_FOLDER_SEPARATOR = FOLDER_SEPARATOR == '/';
 
-  private Path path;
+  private final Path absoluteNormalizedPath;
 
-  private static String toString(Path path) {
+  private final String usfsPath;
+
+  private static String toUnixPath(Path path) {
     final String s = path.toString();
     return UNIX_FOLDER_SEPARATOR ? s : s.replace(FOLDER_SEPARATOR, '/');
   }
 
-  public static String fromInstantToRfc(Instant instant) {
-    return DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.ofInstant(instant, ZoneOffset.UTC));
-  }
-
-  public static Instant fromRfcToInstant(String s) {
-    return Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(s));
-  }
-
-  private static int[] pathToId(String path) {
-    if (path.length() == 0) return new int[0];
-    return Arrays.stream(path.split("/"))
-        .mapToInt(s -> Concept.USFS.getUnsignedShort(s) & 0xFFFE).toArray(); // v02
-  }
-
   public USFSFtpFile(Path path) {
+    // TODO: 2020-08-04 path validation
     if (path.isAbsolute()) throw new IllegalStateException();
-    this.path = path.normalize();
+    this.absoluteNormalizedPath = path.normalize();
+    usfsPath = Concept.fromUnixPathToUsfsPath(toUnixPath(absoluteNormalizedPath));
   }
 
   @Override
   public String getAbsolutePath() {
-    return toString(path);
-    //throw new IllegalAccessError();
-    //return '/' + path;
-    //return ftpFile.getAbsolutePath();
-  }
-
-  public String getRelativePath() {
-    return toString(ROOT_FOLDER.relativize(path));
+    return toUnixPath(absoluteNormalizedPath);
   }
 
   @Override
   public String getName() {
-    return path.getFileName().toString();
+    return absoluteNormalizedPath.getFileName().toString();
   }
 
   @Override
@@ -173,7 +154,7 @@ public class USFSFtpFile implements FtpFile {
   @Override
   public boolean mkdir() {
     updateHead(
-        "FileName", path.getFileName().toString(),
+        "FileName", absoluteNormalizedPath.getFileName().toString(),
         "IsFolder", "true",
         "Last-Modified", fromInstantToRfc(Instant.now()));
     return getInternalPath().toFile().mkdir();
@@ -217,11 +198,11 @@ public class USFSFtpFile implements FtpFile {
     throw new IllegalAccessError();
   }
 
+  // usfsFilePath = target/47736
+  // usfsMetaPath = target/47737
   public Path getInternalPath(boolean isHead) {
-    int[] internalId = pathToId(getRelativePath());
-    if (isHead && internalId.length > 0) internalId[internalId.length - 1] |= 0x0001; // v02
-    String internalPath = Arrays.stream(internalId).mapToObj(i -> String.format("%05d", i)).collect(Collectors.joining("/"));
-    return MOUNTED_FOLDER.resolve(internalPath);
+    String path = MOUNTED_FOLDER_PREFIX + usfsPath;
+    return Paths.get(isHead ? Concept.v02Meta(path) : path);
   }
 
   public Path getInternalPath() {
@@ -249,7 +230,7 @@ public class USFSFtpFile implements FtpFile {
       try (FileInputStream stream = new FileInputStream(path1.toFile())) {
         properties.load(stream);
       }
-      list.add(new USFSFtpFile(path.resolve(properties.getProperty("FileName"))));
+      list.add(new USFSFtpFile(absoluteNormalizedPath.resolve(properties.getProperty("FileName"))));
     }
     return list;
   }
@@ -257,7 +238,7 @@ public class USFSFtpFile implements FtpFile {
   @Override
   public OutputStream createOutputStream(long offset) throws IOException {
     updateHead(
-        "FileName", path.getFileName().toString(),
+        "FileName", absoluteNormalizedPath.getFileName().toString(),
         "IsFolder", "false",
         "Last-Modified", fromInstantToRfc(Instant.now()));
     final RandomAccessFile randomAccessFile = new RandomAccessFile(getInternalPath().toFile(), "rw");

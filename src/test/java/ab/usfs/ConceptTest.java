@@ -16,9 +16,11 @@
 
 package ab.usfs;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.security.Security;
+import java.time.Instant;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
@@ -121,5 +123,23 @@ public class ConceptTest {
     assertNull(Concept.v02Meta(null));
     assertNull(Concept.v02Meta("/0000a000"));
     assertNull(Concept.v02Meta("12345"));
+  }
+
+  @Test
+  public void instantStrings() {
+    Instant rfc7231 = Instant.parse("1994-11-06T08:49:37Z"); // rfc7231 - Sun, 06 Nov 1994 08:49:37 GMT
+    Assert.assertEquals(rfc7231, Instant.ofEpochMilli(784111777000L));
+    Assert.assertEquals(784111777000L, rfc7231.toEpochMilli());
+    //Assert.assertEquals("Sun, 06 Nov 1994 08:49:37 GMT", Concept.fromInstantToRfc(rfc7231)); // rfc7231
+    // this test failed, need to implement DateTimeFormatter.RFC_7231_DATE_TIME
+    // that will provide preferred fixed length format
+    Assert.assertEquals(rfc7231, Concept.fromRfcToInstant("Sun, 6 Nov 1994 08:49:37 GMT")); // failed case decoding
+    Assert.assertEquals(rfc7231, Concept.fromRfcToInstant("Sun, 06 Nov 1994 08:49:37 GMT"));
+
+    Instant rfc7232 = Instant.parse("1994-11-15T12:45:26Z"); // rfc7232 - Tue, 15 Nov 1994 12:45:26 GMT
+    Assert.assertEquals(rfc7232, Instant.ofEpochMilli(784903526000L));
+    Assert.assertEquals(784903526000L, rfc7232.toEpochMilli());
+    Assert.assertEquals("Tue, 15 Nov 1994 12:45:26 GMT", Concept.fromInstantToRfc(rfc7232)); // rfc7232
+    Assert.assertEquals(rfc7232, Concept.fromRfcToInstant("Tue, 15 Nov 1994 12:45:26 GMT"));
   }
 }

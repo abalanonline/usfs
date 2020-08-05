@@ -33,9 +33,6 @@ public class USFSFtpFileTest {
         DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(l), ZoneOffset.UTC)); // RFC 7231,7232
     Function<String, Long> rfcToMs = s ->
         Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(s)).toEpochMilli(); // RFC 7231,7232
-    Assert.assertEquals("Tue, 15 Nov 1994 12:45:26 GMT", msToRfc.apply(784903526000L)); // rfc7232
-    //Assert.assertEquals("Sun, 06 Nov 1994 08:49:37 GMT", msToRfc.apply(784111777000L)); // rfc7231
-    Assert.assertEquals(784111777000L, (long) rfcToMs.apply("Sun, 06 Nov 1994 08:49:37 GMT"));
     //Instant.parse("Sun, 06 Nov 1994 08:49:37 GMT").toEpochMilli();
   }
 }
