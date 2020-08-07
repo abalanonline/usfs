@@ -74,14 +74,22 @@ public class USFSFtpFile implements FtpFile {
   }
 
 
-  public File body() {
+  public File legacyBody() {
     return new File(MOUNTED_FOLDER_PREFIX + usfsPath);
     //return Paths.get(MOUNTED_FOLDER_PREFIX + usfsPath);
     // TODO: 2020-08-04 use NIO
   }
 
-  public File head() {
+  public File legacyHead() {
     return new File(Concept.v02Meta(MOUNTED_FOLDER_PREFIX + usfsPath));
+  }
+
+  public Path body() {
+    return Paths.get(MOUNTED_FOLDER_PREFIX + usfsPath);
+  }
+
+  public Path head() {
+    return Paths.get(Concept.v02Meta(MOUNTED_FOLDER_PREFIX + usfsPath));
   }
 
   @Override
@@ -105,25 +113,25 @@ public class USFSFtpFile implements FtpFile {
   @Override
   public boolean isDirectory() {
     log.info("isDirectory " + realPath);
-    return body().isDirectory();
+    return legacyBody().isDirectory();
   }
 
   @Override
   public boolean isFile() {
     log.info("isFile " + realPath);
-    return body().isFile();
+    return legacyBody().isFile();
   }
 
   @Override
   public boolean doesExist() {
     log.info("doesExist " + realPath);
-    return body().exists();
+    return legacyBody().exists();
   }
 
   @Override
   public boolean isReadable() {
     log.info("isReadable " + realPath);
-    return body().canRead();
+    return legacyBody().canRead();
   }
 
   @Override
@@ -154,7 +162,7 @@ public class USFSFtpFile implements FtpFile {
   @Override
   public int getLinkCount() {
     log.info("getLinkCount " + realPath);
-    return body().isDirectory() ? 3 : 1;
+    return legacyBody().isDirectory() ? 3 : 1;
   }
 
   @SneakyThrows
@@ -174,7 +182,7 @@ public class USFSFtpFile implements FtpFile {
   @Override
   public long getSize() {
     log.info("getSize " + realPath);
-    return body().length();
+    return legacyBody().length();
   }
 
   @Override
@@ -191,7 +199,7 @@ public class USFSFtpFile implements FtpFile {
         "FileName", realFileName,
         "IsFolder", "true",
         "Last-Modified", fromInstantToRfc(Instant.now()));
-    return body().mkdir();
+    return legacyBody().mkdir();
   }
 
   @SneakyThrows
@@ -207,7 +215,7 @@ public class USFSFtpFile implements FtpFile {
     for (int i = 0; i < args.length; i += 2) {
       properties.setProperty(args[i], args[i+1]);
     }
-    try (FileOutputStream stream = new FileOutputStream(head())) {
+    try (FileOutputStream stream = new FileOutputStream(legacyHead())) {
       properties.store(stream, "file system of the year"); // watch and learn
     }
     //list.add(new USFSFtpFile(path.resolve(properties.getProperty("FileName")), null));
@@ -215,7 +223,7 @@ public class USFSFtpFile implements FtpFile {
 
   private Properties getHeadProperties() throws IOException {
     final Properties properties = new Properties();
-    try (FileInputStream stream = new FileInputStream(head())) {
+    try (FileInputStream stream = new FileInputStream(legacyHead())) {
       properties.load(stream);
     }
     return properties;
@@ -224,8 +232,8 @@ public class USFSFtpFile implements FtpFile {
   @Override
   public boolean delete() {
     log.info("delete " + realPath);
-    final boolean h = head().delete(); // head
-    return body().delete(); // body
+    final boolean h = legacyHead().delete(); // head
+    return legacyBody().delete(); // body
   }
 
   @Override
@@ -239,7 +247,7 @@ public class USFSFtpFile implements FtpFile {
   @Override
   public List<? extends FtpFile> listFiles() {
     log.info("listFiles " + realPath);
-    Path internalFolder = body().toPath();
+    Path internalFolder = legacyBody().toPath();
     Map<Integer, Integer> internalFiles = new HashMap<>();
     try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(internalFolder, "[0-6][0-9][0-9][0-9][0-9]")) {
       for (Path path : directoryStream) {
@@ -269,7 +277,7 @@ public class USFSFtpFile implements FtpFile {
         "FileName", realFileName,
         "IsFolder", "false",
         "Last-Modified", fromInstantToRfc(Instant.now()));
-    final RandomAccessFile randomAccessFile = new RandomAccessFile(body(), "rw");
+    final RandomAccessFile randomAccessFile = new RandomAccessFile(legacyBody(), "rw");
     randomAccessFile.setLength(offset);
     randomAccessFile.seek(offset);
     return new FileOutputStream(randomAccessFile.getFD()) {
@@ -284,7 +292,7 @@ public class USFSFtpFile implements FtpFile {
   @Override
   public InputStream createInputStream(long offset) throws IOException {
     log.info("createInputStream " + realPath);
-    final RandomAccessFile randomAccessFile = new RandomAccessFile(body(), "r");
+    final RandomAccessFile randomAccessFile = new RandomAccessFile(legacyBody(), "r");
     randomAccessFile.seek(offset);
     return new FileInputStream(randomAccessFile.getFD()) {
       @Override
