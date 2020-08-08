@@ -1,11 +1,9 @@
 # USFS - unsigned short file system
 
-Let's trip back to the 80s and save our files in [8.3 filename convention](https://en.wikipedia.org/wiki/8.3_filename).
+Let's trip back to the 80s and save our modern files in [8.3 filename convention](https://en.wikipedia.org/wiki/8.3_filename).
 
-Calculate SHA-256 of file name, take 15 bits of it and create a pair of unsigned shorts, even with content and odd with metadata (original file name, modification time)
+Calculate SHA-256 of file name, take 16 bits of it and use this unsigned short as a new name. And one more file for metadata (original file name, modification time)
 
-16 bits total that give file names 00000 - 65535 and excitingly high chance of collision.
+Octal encoding give file names 000000 - 177777 and excitingly high chance of collision.
 
-2020-08-03: It works. Two things to fix in 0.2 - hash the whole path instead of file name and replace decimal system with binary compatible octal (names 000000 - 177777)
-
-2020-08-04: The idea of hashes for file names is clean but metadata bit hack is not. v0.3 is 16 bit of SHA-256 for unsigned short for file/folder name and .0 extension for metadata (177777.0)
+[USFS release notes and roadmap](https://github.com/abalanonline/usfs/releases)

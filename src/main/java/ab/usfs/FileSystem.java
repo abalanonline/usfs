@@ -20,9 +20,12 @@ import lombok.SneakyThrows;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
@@ -36,10 +39,9 @@ import static ab.usfs.Concept.fromRfcToInstant;
 
 public class FileSystem implements Storage {
 
-  // TODO: 2020-08-07 Review the key names and which class they must belong
-  public static final String HEAD_FILE_NAME = "FileName";
-  public static final String HEAD_IS_FOLDER = "IsFolder";
-  public static final String HEAD_LAST_MODIFIED = "Last-Modified";
+  public static final String META_KEY_FILE_NAME = "FileName";
+  public static final String META_KEY_IS_FOLDER = "IsFolder";
+  public static final String META_KEY_LAST_MODIFIED = "Last-Modified";
 
   private final String mountPoint;
   private final Concept concept;
@@ -50,25 +52,8 @@ public class FileSystem implements Storage {
     mountPoint = s;
     Path root = new Path("/", concept);
     if (!exists(root)) {
-      String head = mountPoint + root.getHead();
-      Files.createDirectories(Paths.get(head.substring(0, head.lastIndexOf('/'))));
-      Properties properties = new Properties();
-      properties.setProperty(HEAD_FILE_NAME, "");
-      properties.setProperty(HEAD_IS_FOLDER, "true");
-      properties.setProperty(HEAD_LAST_MODIFIED, fromInstantToRfc(Instant.now()));
-      try (FileOutputStream stream = new FileOutputStream(head)) {
-        properties.store(stream, null);
-      }
+      createFolder(root); // root meta need to be manually created
     }
-    java.nio.file.Path test = Paths.get("/");
-    Files.exists(test);
-    Files.isDirectory(test);
-    Files.isRegularFile(test);
-    Files.getLastModifiedTime(test);
-    //Files.setLastModifiedTime(test, null);
-    //Files.createDirectory(test);
-    //Files.delete(test);
-    Files.size(test);
   }
 
   public static FileSystem mount(String s) {
@@ -76,28 +61,31 @@ public class FileSystem implements Storage {
   }
 
   @SneakyThrows
-  private Properties getHead(String nioPath) {
-    final Properties properties = new Properties();
+  private Properties getProperties(String nioPath) {
+    Properties properties = new Properties();
     try (FileInputStream stream = new FileInputStream(nioPath)) {
       properties.load(stream);
     }
     return properties;
   }
 
-  public Properties getHead(Path path) {
-    return getHead(mountPoint + path.getHead());
+  public Properties getProperties(Path path) {
+    return getProperties(mountPoint + path.getHead());
   }
 
   public String getProperty(Path path, String key) {
-    return getHead(path).getProperty(key);
+    return getProperties(path).getProperty(key);
   }
 
   @SneakyThrows
-  public void setProperty(Path path, String key, String value) {
-    Properties properties = getHead(path);
-    properties.setProperty(key, value);
+  public void setProperty(Path path, String... keyvalue) {
+    if (keyvalue.length % 2 != 0) throw new IllegalStateException();
+    Properties properties = getProperties(path);
+    for (int i = 0; i < keyvalue.length; i+=2) {
+      properties.setProperty(keyvalue[i], keyvalue[i+1]);
+    }
     try (FileOutputStream stream = new FileOutputStream(mountPoint + path.getHead())) {
-      properties.store(stream, "file system of the year"); // watch and learn
+      properties.store(stream, null);
     }
   }
 
@@ -108,12 +96,14 @@ public class FileSystem implements Storage {
 
   @Override
   public boolean isFolder(Path path) {
-    return exists(path) && Boolean.parseBoolean(getProperty(path, HEAD_IS_FOLDER));
+    return exists(path) && !Files.exists(Paths.get(mountPoint + path.getBody()));
+    //return exists(path) && Boolean.parseBoolean(getProperty(path, META_KEY_IS_FOLDER));
   }
 
   @Override
   public boolean isFile(Path path) {
-    return exists(path) && !Boolean.parseBoolean(getProperty(path, HEAD_IS_FOLDER));
+    return exists(path) && Files.exists(Paths.get(mountPoint + path.getBody()));
+    //return exists(path) && !Boolean.parseBoolean(getProperty(path, META_KEY_IS_FOLDER));
   }
 
   @SneakyThrows
@@ -125,7 +115,7 @@ public class FileSystem implements Storage {
     try (DirectoryStream<java.nio.file.Path> directoryStream =
              Files.newDirectoryStream(Paths.get(nioFolder), concept.getFileMask() + ".0")) {
       for (java.nio.file.Path nioPath : directoryStream) {
-        String propertyFileName = getHead(nioFolder + '/' + nioPath.getFileName().toString()).getProperty(HEAD_FILE_NAME);
+        String propertyFileName = getProperties(nioFolder + '/' + nioPath.getFileName().toString()).getProperty(META_KEY_FILE_NAME);
         if (propertyFileName.isEmpty()) {
           continue; // skip empty names in list, they are technical entries
         }
@@ -137,23 +127,27 @@ public class FileSystem implements Storage {
 
   @Override
   public Instant getLastModifiedInstant(Path path) {
-    return fromRfcToInstant(getProperty(path, HEAD_LAST_MODIFIED));
+    return fromRfcToInstant(getProperty(path, META_KEY_LAST_MODIFIED));
   }
 
   @Override
   public Path setLastModifiedInstant(Path path, Instant instant) {
-    setProperty(path, HEAD_LAST_MODIFIED, fromInstantToRfc(instant));
+    setProperty(path, META_KEY_LAST_MODIFIED, fromInstantToRfc(instant));
     return path;
   }
 
   @SneakyThrows
   @Override
   public Path createFolder(Path path) {
-    Files.createDirectory(Paths.get(mountPoint + path.getFoot()));
+    java.nio.file.Path nioFolder = Paths.get(mountPoint + path.getFoot());
+    if (!Files.isDirectory(nioFolder)) { // tree balancing
+      Files.createDirectory(nioFolder);
+    }
     Files.createFile(Paths.get(mountPoint + path.getHead()));
-    setProperty(path, HEAD_IS_FOLDER, "true");
-    setProperty(path, HEAD_FILE_NAME, path.getFileName());
-    setProperty(path, HEAD_LAST_MODIFIED, fromInstantToRfc(Instant.now()));
+    setProperty(path,
+        META_KEY_IS_FOLDER, Boolean.TRUE.toString(),
+        META_KEY_FILE_NAME, path.getFileName(),
+        META_KEY_LAST_MODIFIED, fromInstantToRfc(Instant.now()));
     return path;
   }
 
@@ -176,10 +170,14 @@ public class FileSystem implements Storage {
     if (!exists(path)) {
       throw new NoSuchFileException(path.toString());
     }
-    if (isFolder(path)) {
-      Files.delete(Paths.get(mountPoint + path.getFoot()));
-    } else {
+    if (isFile(path)) {
       Files.delete(Paths.get(mountPoint + path.getBody()));
+    } else {
+      try {
+        Files.delete(Paths.get(mountPoint + path.getFoot()));
+      } catch (DirectoryNotEmptyException e) {
+        // tree balancing
+      }
     }
     Files.delete(Paths.get(mountPoint + path.getHead()));
   }
@@ -195,9 +193,10 @@ public class FileSystem implements Storage {
   public OutputStream newOutputStream(Path path) {
     Files.createFile(Paths.get(mountPoint + path.getBody()));
     Files.createFile(Paths.get(mountPoint + path.getHead()));
-    setProperty(path, HEAD_IS_FOLDER, Boolean.FALSE.toString());
-    setProperty(path, HEAD_FILE_NAME, path.getFileName());
-    setProperty(path, HEAD_LAST_MODIFIED, fromInstantToRfc(Instant.now()));
+    setProperty(path,
+        META_KEY_IS_FOLDER, Boolean.FALSE.toString(),
+        META_KEY_FILE_NAME, path.getFileName(),
+        META_KEY_LAST_MODIFIED, fromInstantToRfc(Instant.now()));
     return Files.newOutputStream(Paths.get(mountPoint + path.getBody()));
   }
 

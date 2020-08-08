@@ -17,21 +17,18 @@
 package ab;
 
 import lombok.SneakyThrows;
-import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.FtpServerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
-public class USFSFtpServerFactory {
+public class FtpServer {
 
   @SneakyThrows
-  public USFSFtpServerFactory() {
-    FtpServerFactory ftpServerFactory = new FtpServerFactory();
-    NullUser.MANAGER.setHomeDirectory("target");
-    ftpServerFactory.setUserManager(NullUser.MANAGER);
-    ftpServerFactory.setFileSystem(new USFSFileSystemFactory());
-    FtpServer ftpServer = ftpServerFactory.createServer();
-    ftpServer.start();
+  public FtpServer() {
+    FtpServerFactory factory = new FtpServerFactory();
+    factory.setUserManager(NullUser.MANAGER);
+    factory.setFileSystem(new UsfsFtpStorage("target"));
+    factory.createServer().start();
   }
 
 }

@@ -25,7 +25,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.function.Function;
 
-public class USFSFtpFileTest {
+public class UsfsFtpFileTest {
 
   @Test
   public void stringToId() {
