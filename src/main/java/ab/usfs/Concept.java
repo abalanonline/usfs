@@ -99,7 +99,7 @@ public class Concept {
   }
 
   public String getFileMask() {
-    return pad("", '?');
+    return pad("0", '?').replace("0", "[1357]");
   }
 
   public UUID stringToUuid(String s) {

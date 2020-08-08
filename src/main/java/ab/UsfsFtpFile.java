@@ -86,7 +86,7 @@ public class UsfsFtpFile implements FtpFile {
 
   @Override
   public boolean isWritable() {
-    log.info("isWritable " + path);
+    log.debug("isWritable " + path);
     return true; // if does not exist it is writable, existing folders are writable too
   }
 
@@ -97,7 +97,7 @@ public class UsfsFtpFile implements FtpFile {
 
   @Override
   public boolean mkdir() {
-    log.info("mkdir " + path);
+    log.debug("mkdir " + path);
     return storage.createFolder(path) != null;
   }
 
@@ -159,14 +159,14 @@ public class UsfsFtpFile implements FtpFile {
 
   @Override
   public OutputStream createOutputStream(long offset) {
-    log.info("createOutputStream " + path);
+    log.debug("createOutputStream " + path);
     if (offset > 0) throw new IllegalStateException("stream with offset is not supported");
     return storage.newOutputStream(path);
   }
 
   @Override
   public InputStream createInputStream(long offset) {
-    log.info("createInputStream " + path);
+    log.debug("createInputStream " + path);
     if (offset > 0) throw new IllegalStateException("stream with offset is not supported");
     return storage.newInputStream(path);
   }

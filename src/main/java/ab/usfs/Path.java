@@ -64,8 +64,11 @@ public class Path {
     uxFolder = uxPath.substring(0, index);
     fileName = uxPath.substring(index + 1);
     foot = '/' + concept.getStringHash(uxPath.equals("/") ? uxFolder : uxPath);
-    body = '/' + concept.getStringHash(uxFolder) + '/' + concept.getStringHash(fileName);
-    head = body + ".0";
+    String fileNameHash = concept.getStringHash(fileName);
+    int lastDigit = Integer.parseInt(fileNameHash.substring(fileNameHash.length() - 1)) | 1; // with last bit
+    fileNameHash = fileNameHash.substring(0, fileNameHash.length() - 1);
+    body = '/' + concept.getStringHash(uxFolder) + '/' + fileNameHash + (lastDigit - 1);
+    head = '/' + concept.getStringHash(uxFolder) + '/' + fileNameHash + lastDigit;
   }
 
   public static Path getPath(String s) {

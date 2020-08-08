@@ -113,7 +113,7 @@ public class FileSystem implements Storage {
     String nioFolder = mountPoint + path.getFoot();
     String usfsFolder = path.toString().equals("/") ? path.toString() : (path.toString() + '/');
     try (DirectoryStream<java.nio.file.Path> directoryStream =
-             Files.newDirectoryStream(Paths.get(nioFolder), concept.getFileMask() + ".0")) {
+             Files.newDirectoryStream(Paths.get(nioFolder), concept.getFileMask())) {
       for (java.nio.file.Path nioPath : directoryStream) {
         String propertyFileName = getProperties(nioFolder + '/' + nioPath.getFileName().toString()).getProperty(META_KEY_FILE_NAME);
         if (propertyFileName.isEmpty()) {
