@@ -16,6 +16,8 @@
 
 package ab;
 
+import ab.usfs.FileSystem;
+import ab.usfs.Storage;
 import org.apache.ftpserver.ftplet.FileSystemFactory;
 import org.apache.ftpserver.ftplet.FileSystemView;
 import org.apache.ftpserver.ftplet.FtpException;
@@ -28,11 +30,16 @@ import java.nio.file.Paths;
 public class USFSFileSystemFactory implements FileSystemFactory, FileSystemView {
 
   private Path currentFolder;
+  private final Storage storage;
+
+  public USFSFileSystemFactory() {
+    currentFolder = Paths.get("/");
+    storage = FileSystem.mount("target");
+  }
 
   @Override
   public FileSystemView createFileSystemView(User user) throws FtpException {
-    currentFolder = Paths.get("/");
-    return this;
+    return new USFSFileSystemFactory();
   }
 
   @Override
@@ -42,20 +49,20 @@ public class USFSFileSystemFactory implements FileSystemFactory, FileSystemView 
 
   @Override
   public FtpFile getWorkingDirectory() throws FtpException {
-    return new USFSFtpFile(currentFolder);
+    return new USFSFtpFile(currentFolder, storage);
   }
 
   @Override
   public boolean changeWorkingDirectory(String s) throws FtpException {
     Path path = currentFolder.resolve(s);
-    boolean canChange = new USFSFtpFile(path).isDirectory();
+    boolean canChange = new USFSFtpFile(path, storage).isDirectory();
     if (canChange) currentFolder = path;
     return canChange;
   }
 
   @Override
   public FtpFile getFile(String s) throws FtpException {
-    return new USFSFtpFile(currentFolder.resolve(s));
+    return new USFSFtpFile(currentFolder.resolve(s), storage);
   }
 
   @Override

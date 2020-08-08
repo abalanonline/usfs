@@ -1,0 +1,2 @@
+logging.level.org.apache.ftpserver.listener.nio.FtpLoggingFilter: WARN
+logging.level.ab.USFSFtpFile: INFO

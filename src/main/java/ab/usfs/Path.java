@@ -16,12 +16,25 @@
 
 package ab.usfs;
 
+import lombok.Getter;
+
 public class Path {
 
+  private final String uxPath;
+  private final String uxFolder;
 
+  @Getter
+  private final String fileName; // getFileName()
+
+  @Getter
+  private final String head;
+  @Getter
+  private final String body;
+  @Getter
+  private final String foot;
 
   private boolean isValidPath(String s) {
-    char[] invalidChars = {'\\', '\0'};
+    char[] invalidChars = {'\\', '\0', '*', '?'};
     if (s.equals("/")) {
       return true; // root folder is boundary case
     }
@@ -47,13 +60,24 @@ public class Path {
   }
 
   public Path(String s, Concept concept) {
-    if (!isValidPath(s)) { // one validation in constructor is enough
-      throw new IllegalArgumentException(s);
+    uxPath = s;
+    if (!isValidPath(uxPath)) { // one validation in constructor is enough
+      throw new IllegalArgumentException(uxPath);
     }
+    int index = uxPath.lastIndexOf('/');
+    uxFolder = uxPath.substring(0, index);
+    fileName = uxPath.substring(index + 1);
+    foot = '/' + concept.getStringHash(uxPath.equals("/") ? uxFolder : uxPath);
+    body = '/' + concept.getStringHash(uxFolder) + '/' + concept.getStringHash(fileName);
+    head = body + ".0";
   }
 
   public static Path getPath(String s) {
     return new Path(s, Concept.USFS);
   }
 
+  @Override
+  public String toString() {
+    return uxPath;
+  }
 }

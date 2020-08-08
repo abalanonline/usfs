@@ -46,7 +46,7 @@ public class Concept {
 
   public static final Charset CHARSET = StandardCharsets.UTF_8;
   private final int digestSize;
-  private final int stringBaseSize;
+  private final int radixSize;
   private final String digestAlgorithm;
 
   /**
@@ -92,15 +92,26 @@ public class Concept {
     }
   }
 
-  public BigInteger getStringHash(String s) {
+  public String getStringHash(String s) {
     byte[] bytes = getBitHash(s);
     int bits = bytes.length << 3;
     BigInteger bigInteger = new BigInteger(bytes);
     if ((bigInteger.compareTo(BigInteger.ZERO) < 0)) bigInteger = bigInteger.add(BigInteger.ONE.shiftLeft(bits));
-    if (bits > digestSize) {
-      bigInteger = bigInteger.shiftRight(bits - digestSize);
+    bigInteger = bigInteger.shiftRight(bits - digestSize);
+    return pad(bigInteger.toString(1 << radixSize), '0');
+  }
+
+  private String pad(String s, char c) {
+    int radixSymbols = ((digestSize % radixSize == 0) ? 0 : 1) + (digestSize / radixSize);
+    StringBuilder stringBuilder = new StringBuilder(radixSymbols);
+    for (int i = s.length(); i < radixSymbols; i++) {
+      stringBuilder.append(c);
     }
-    return bigInteger;
+    return stringBuilder.append(s).toString();
+  }
+
+  public String getFileMask() {
+    return pad("", '?');
   }
 
   public UUID stringToUuid(String s) {
