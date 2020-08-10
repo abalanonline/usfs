@@ -29,15 +29,15 @@ import static org.junit.Assert.assertNull;
 public class ConceptTest {
 
   private String testMD5(String s) {
-    return Concept.toLowercaseHexadecimal(Concept.MD5.getBitHash(s));
+    return Concept.toLowercaseHexadecimal(Concept.MD5.digestBit(s));
   }
 
   private String testSHA1(String s) {
-    return Concept.toLowercaseHexadecimal(Concept.SHA1.getBitHash(s));
+    return Concept.toLowercaseHexadecimal(Concept.SHA1.digestBit(s));
   }
 
   private String testSHA256(String s) {
-    return Concept.toLowercaseHexadecimal(Concept.SHA256.getBitHash(s));
+    return Concept.toLowercaseHexadecimal(Concept.SHA256.digestBit(s));
   }
 
   @Test

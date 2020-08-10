@@ -17,6 +17,11 @@
 package ab.usfs;
 
 import lombok.Getter;
+import lombok.SneakyThrows;
+
+import java.io.ByteArrayOutputStream;
+import java.math.BigInteger;
+import java.util.Arrays;
 
 public class Path {
 
@@ -32,6 +37,14 @@ public class Path {
   private final String body;
   @Getter
   private final String foot;
+  @Getter
+  private final Concept.Vector v1;
+  @Getter
+  private final Concept.Vector v2;
+  @Getter
+  private final Concept.Vector v3;
+  @Getter
+  private final byte[] b12;
 
   private boolean isValidPath(String s) {
     char[] invalidChars = {'\\', '\0', '*', '?'};
@@ -55,6 +68,7 @@ public class Path {
     return true;
   }
 
+  @SneakyThrows
   public Path(String s, Concept concept) {
     uxPath = s;
     if (!isValidPath(uxPath)) { // one validation in constructor is enough
@@ -63,12 +77,20 @@ public class Path {
     int index = uxPath.lastIndexOf('/');
     uxFolder = uxPath.substring(0, index);
     fileName = uxPath.substring(index + 1);
-    foot = '/' + concept.getStringHash(uxPath.equals("/") ? uxFolder : uxPath);
-    String fileNameHash = concept.getStringHash(fileName);
+    v1 = concept.vector(uxFolder);
+    v2 = concept.vector(fileName);
+    v3 = concept.vector(uxPath.equals("/") ? uxFolder : uxPath);
+    String fileNameHash = v2.getStr();
     int lastDigit = Integer.parseInt(fileNameHash.substring(fileNameHash.length() - 1)) | 1; // with last bit
     fileNameHash = fileNameHash.substring(0, fileNameHash.length() - 1);
-    body = '/' + concept.getStringHash(uxFolder) + '/' + fileNameHash + (lastDigit - 1);
-    head = '/' + concept.getStringHash(uxFolder) + '/' + fileNameHash + lastDigit;
+    body = '/' + v1.getStr() + '/' + fileNameHash + (lastDigit - 1);
+    head = '/' + v1.getStr() + '/' + fileNameHash + lastDigit;
+    foot = '/' + v3.getStr();
+    try (ByteArrayOutputStream stream = new ByteArrayOutputStream()) {
+      stream.write(v1.getBit());
+      stream.write(v2.getBit());
+      b12 = stream.toByteArray();
+    }
   }
 
   public static Path getPath(String s) {

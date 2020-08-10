@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -72,21 +73,33 @@ public class Concept {
         .collect(Collectors.joining());
   }
 
-  public byte[] getBitHash(String s) {
+  public byte[] digestBit(String s) {
     try {
-      return MessageDigest.getInstance(digestAlgorithm).digest(s.getBytes(CHARSET)); // unique MessageDigest.getInstance
+      byte[] bytes = MessageDigest.getInstance(digestAlgorithm).digest(s.getBytes(CHARSET)); // unique MessageDigest.getInstance
+      return Arrays.copyOf(bytes, digestSize >> 3);
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException(e); // required to be supported
     }
   }
 
-  public String getStringHash(String s) {
-    byte[] bytes = getBitHash(s);
+  public String radixStr(byte[] bytes) {
     int bits = bytes.length << 3;
     BigInteger bigInteger = new BigInteger(bytes);
     if ((bigInteger.compareTo(BigInteger.ZERO) < 0)) bigInteger = bigInteger.add(BigInteger.ONE.shiftLeft(bits));
-    bigInteger = bigInteger.shiftRight(bits - digestSize);
     return pad(bigInteger.toString(1 << radixSize), '0');
+  }
+
+  public String digestStr(String s) {
+    return radixStr(digestBit(s));
+//    int bits = bytes.length << 3;
+//    BigInteger bigInteger = new BigInteger(bytes);
+//    if ((bigInteger.compareTo(BigInteger.ZERO) < 0)) bigInteger = bigInteger.add(BigInteger.ONE.shiftLeft(bits));
+//    return pad(bigInteger.toString(1 << radixSize), '0');
+  }
+
+  public Vector vector(String s) {
+    byte[] bytes = digestBit(s);
+    return new Vector(s, bytes, radixStr(bytes));
   }
 
   private String pad(String s, char c) {
@@ -103,7 +116,7 @@ public class Concept {
   }
 
   public UUID stringToUuid(String s) {
-    byte[] digest = getBitHash(s);
+    byte[] digest = digestBit(s);
     ByteBuffer byteBuffer = ByteBuffer.wrap(digest);
     long mostSigBits = byteBuffer.getLong();
     long leastSigBits = byteBuffer.getLong();
@@ -111,8 +124,20 @@ public class Concept {
   }
 
   public int getUnsignedShort(String s) {
-    byte[] b = getBitHash(s);
+    byte[] b = digestBit(s);
     return ((b[0] & 0xFF) << 8) | (b[1] & 0xFF); // eww, ByteBuffer was better
   }
 
+  @AllArgsConstructor
+  @Getter
+  public static class Vector {
+    private final String obj;
+    private final byte[] bit;
+    private final String str;
+
+    @Override
+    public String toString() {
+      return str + " (" + obj + ")";
+    }
+  }
 }

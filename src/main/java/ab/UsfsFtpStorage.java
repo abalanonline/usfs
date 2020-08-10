@@ -16,7 +16,6 @@
 
 package ab;
 
-import ab.usfs.FileSystem;
 import ab.usfs.Path;
 import ab.usfs.Storage;
 import lombok.extern.slf4j.Slf4j;
@@ -29,18 +28,16 @@ import org.apache.ftpserver.ftplet.User;
 public class UsfsFtpStorage implements FileSystemFactory, FileSystemView {
 
   private String currentFolder;
-  private String mountPoint;
   private final Storage storage;
 
-  public UsfsFtpStorage(String mountPoint) {
+  public UsfsFtpStorage(Storage storage) {
     currentFolder = "/";
-    this.mountPoint = mountPoint;
-    storage = FileSystem.mount(mountPoint);
+    this.storage = storage;
   }
 
   @Override
   public FileSystemView createFileSystemView(User user) {
-    return new UsfsFtpStorage(this.mountPoint);
+    return new UsfsFtpStorage(this.storage);
   }
 
   @Override

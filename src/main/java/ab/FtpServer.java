@@ -16,6 +16,15 @@
 
 package ab;
 
+import ab.usfs.FileSystem;
+import ab.usfs.GridFs;
+import ab.usfs.Storage;
+import com.mongodb.ConnectionString;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.gridfs.GridFSBucket;
+import com.mongodb.client.gridfs.GridFSBuckets;
 import lombok.SneakyThrows;
 import org.apache.ftpserver.FtpServerFactory;
 import org.springframework.stereotype.Service;
@@ -25,9 +34,17 @@ public class FtpServer {
 
   @SneakyThrows
   public FtpServer() {
+    final String mongoUrl = "mongodb://localhost:27017/usfs";
+    ConnectionString connectionString = new ConnectionString(mongoUrl);
+    MongoClient mongoClient = MongoClients.create(connectionString);
+    MongoDatabase mongoDatabase = mongoClient.getDatabase(connectionString.getDatabase());
+    GridFSBucket gridFs = GridFSBuckets.create(mongoDatabase);
+
     FtpServerFactory factory = new FtpServerFactory();
     factory.setUserManager(NullUser.MANAGER);
-    factory.setFileSystem(new UsfsFtpStorage("target"));
+    //Storage usfsMedium = FileSystem.mount("target");
+    Storage usfsMedium = GridFs.mount(gridFs);
+    factory.setFileSystem(new UsfsFtpStorage(usfsMedium));
     factory.createServer().start();
   }
 
