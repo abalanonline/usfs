@@ -16,68 +16,81 @@
 
 package ab;
 
-import com.mongodb.ConnectionString;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.gridfs.GridFSBucket;
-import com.mongodb.client.gridfs.GridFSBuckets;
-import com.mongodb.client.gridfs.model.GridFSFile;
-import org.bson.BsonBinary;
-import org.bson.BsonValue;
-import org.bson.Document;
-import org.bson.types.ObjectId;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.Table;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.util.Iterator;
 
 @SpringBootApplication
 public class Application {
 
   @Bean
-  public GridFSBucket gridFs() {
-    final String mongoUrl = "mongodb://localhost:27017/usfs";
-    ConnectionString connectionString = new ConnectionString(mongoUrl);
-    MongoClient mongoClient = MongoClients.create(connectionString);
-    MongoDatabase mongoDatabase = mongoClient.getDatabase(connectionString.getDatabase());
-    GridFSBucket gridFs = GridFSBuckets.create(mongoDatabase);
+  public String gridFs() throws IOException {
+    if (true) return "gridFs";
 
-    //for (GridFSFile file : gridFs.find(new Document("metadata", new Document("PathId", new byte[]{0,0})))) {
-    for (GridFSFile file : gridFs.find(new Document("filename", "a"))) {
-      String s = file.toString();
-      s = s + ".";
+    AmazonDynamoDB client =
+        AmazonDynamoDBClientBuilder.standard()
+//        .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://localhost:8000", "us-west-2"))
+        .build();
+
+    DynamoDB dynamoDB = new DynamoDB(Regions.US_EAST_1);
+
+    Table table = dynamoDB.getTable("usfs");
+
+    byte[] bytes = new byte[32];
+    for (int i = 0; i < bytes.length; i++) {
+      bytes[i] = (byte) i;
     }
+    Item item = new Item().withPrimaryKey("pk", BigInteger.valueOf(1).toByteArray(), "sk", bytes).withBinary("b", bytes);
+    String s = item.toJSON();
+    table.putItem(item);
 
-//    byte[] key1 = "filename.ext".getBytes();
-//    BsonValue key2 = new BsonBinary(key1);
-//
-//    gridFs.uploadFromStream("filename.ext", new ByteArrayInputStream("quick brown fox".getBytes()));
-//    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-//    gridFs.downloadToStream(key2, byteArrayOutputStream);
-//
-//    Document filter = new Document("filename", "find.txt");
-//    Iterable<GridFSFile> list = gridFs.find(filter);
-//    for (GridFSFile file : list) {
-//      String s = file.toString();
-//      s = s + ".";
-//    }
-    // connect to mongo instance
-    //final String uriString = "mongodb://$[username]:$[password]@$[hostlist]/$[database]?authSource=$[authSource]";
-    // switch to test database, inventory collection
-    //MongoCollection<Document> collection = mongoDB.getCollection("inventory");
-    //Document canvas = new Document("item", "canvas")
-    //    .append("qty", 100)
-    //    .append("tags", singletonList("cotton"));
-    //Document size = new Document("h", 28)
-    //    .append("w", 35.5)
-    //    .append("uom", "cm");
-    //canvas.put("size", size);
-    //collection.insertOne(canvas);
-    return gridFs;
-    //mongoClient.close();
+    //TableCollection<ListTablesResult> tables = dynamoDB.listTables();
+
+    JsonParser parser = new JsonFactory().createParser(new File("moviedata.json"));
+
+    JsonNode rootNode = new ObjectMapper().readTree(parser);
+    Iterator<JsonNode> iter = rootNode.iterator();
+
+    ObjectNode currentNode;
+
+    while (iter.hasNext()) {
+      currentNode = (ObjectNode) rootNode;//iter.next();
+
+      int year = currentNode.path("year").asInt();
+      String title = currentNode.path("title").asText();
+
+      try {
+        byte[] a = {1,0,2};
+        table.putItem(new Item().withPrimaryKey("pk", a, "sk", a).withJSON("info",
+            currentNode.path("info").toString()));
+        System.out.println("PutItem succeeded: " + year + " " + title);
+
+      }
+      catch (Exception e) {
+        System.err.println("Unable to add movie: " + year + " " + title);
+        System.err.println(e.getMessage());
+        break;
+      }
+      break;
+    }
+    parser.close();
+    return "gridFs";
   }
 
   public static void main(String[] args) {

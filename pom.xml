@@ -33,7 +33,7 @@
 
   <groupId>ab</groupId>
   <artifactId>usfs</artifactId>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
 
   <properties>
     <java.version>1.8</java.version>
@@ -59,7 +59,15 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk-bom</artifactId>
+        <version>1.11.837</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
     </dependencies>
+
   </dependencyManagement>
 
   <dependencies>
@@ -82,6 +90,10 @@
       <version>1.1.1</version>
     </dependency>
 
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-dynamodb</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.mongodb</groupId>

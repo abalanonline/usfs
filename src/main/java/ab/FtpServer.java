@@ -16,9 +16,13 @@
 
 package ab;
 
+import ab.usfs.DynamoDb;
 import ab.usfs.FileSystem;
 import ab.usfs.GridFs;
 import ab.usfs.Storage;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.mongodb.ConnectionString;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -34,16 +38,17 @@ public class FtpServer {
 
   @SneakyThrows
   public FtpServer() {
-    final String mongoUrl = "mongodb://localhost:27017/usfs";
-    ConnectionString connectionString = new ConnectionString(mongoUrl);
-    MongoClient mongoClient = MongoClients.create(connectionString);
-    MongoDatabase mongoDatabase = mongoClient.getDatabase(connectionString.getDatabase());
-    GridFSBucket gridFs = GridFSBuckets.create(mongoDatabase);
+//    final String mongoUrl = "mongodb://localhost:27017/usfs";
+//    ConnectionString connectionString = new ConnectionString(mongoUrl);
+//    MongoClient mongoClient = MongoClients.create(connectionString);
+//    MongoDatabase mongoDatabase = mongoClient.getDatabase(connectionString.getDatabase());
+//    GridFSBucket gridFs = GridFSBuckets.create(mongoDatabase);
 
     FtpServerFactory factory = new FtpServerFactory();
     factory.setUserManager(NullUser.MANAGER);
     //Storage usfsMedium = FileSystem.mount("target");
-    Storage usfsMedium = GridFs.mount(gridFs);
+//    Storage usfsMedium = GridFs.mount(gridFs);
+    Storage usfsMedium = DynamoDb.mount(new DynamoDB(AmazonDynamoDBClientBuilder.defaultClient()).getTable("usfs"));
     factory.setFileSystem(new UsfsFtpStorage(usfsMedium));
     factory.createServer().start();
   }
