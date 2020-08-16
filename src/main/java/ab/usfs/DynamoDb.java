@@ -16,6 +16,7 @@
 
 package ab.usfs;
 
+import com.amazonaws.services.dynamodbv2.document.DeleteItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
@@ -26,6 +27,7 @@ import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.utils.NameMap;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import lombok.SneakyThrows;
 import org.bson.BsonBinary;
 import org.bson.BsonValue;
@@ -42,7 +44,7 @@ import java.util.List;
 
 public class DynamoDb implements Storage {
 
-  private static final int DEFAULT_CHUNKSIZE_BYTES = 255 * 1024;
+  private static final int DEFAULT_CHUNKSIZE_BYTES = 399 * 1024;
   public static final String META_KEY_FILE_NAME = "FileName";
   public static final String META_KEY_IS_FOLDER = "IsFolder";
   public static final String META_KEY_CONTENT_LENGTH = "Content-Length";
@@ -162,7 +164,18 @@ public class DynamoDb implements Storage {
   public void delete(Path path) {
     table.deleteItem(new DeleteItemSpec()
         .withPrimaryKey(META_KEY_PK, path.getV1().getBit(), META_KEY_SK, path.getV2().getBit()));
-    for (Item item : listItems(path.getV3().getBit())) { // delete file chunks
+    for (int chunkCount = 0; chunkCount < Integer.MAX_VALUE; chunkCount++) { // delete file chunks, fast
+      byte[] chunkCountBit = concept.vector(chunkCount).getBit();
+      try {
+        table.deleteItem(new DeleteItemSpec()
+            .withPrimaryKey(META_KEY_PK, path.getV3().getBit(), META_KEY_SK, chunkCountBit)
+            .withConditionExpression(META_KEY_SK + " = :chunk")
+            .withValueMap(new ValueMap().withBinary(":chunk", chunkCountBit)));
+      } catch (ConditionalCheckFailedException e) {
+        break;
+      }
+    }
+    for (Item item : listItems(path.getV3().getBit())) { // delete file chunks, fail-safe
       table.deleteItem(new DeleteItemSpec()
           .withPrimaryKey(META_KEY_PK, path.getV3().getBit(), META_KEY_SK, item.getBinary(META_KEY_SK)));
     }

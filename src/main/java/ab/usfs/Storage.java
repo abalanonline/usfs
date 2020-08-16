@@ -18,6 +18,8 @@ package ab.usfs;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.DirectoryNotEmptyException;
+import java.nio.file.NoSuchFileException;
 import java.time.Instant;
 import java.util.List;
 
@@ -30,7 +32,14 @@ public interface Storage {
   Path setLastModifiedInstant(Path path, Instant instant);
   Path createFolder(Path path);
   long size(Path path); // unspecified for folder
-  void delete(Path path);
+
+  /**
+   * Delete file or folder
+   * @throws NoSuchFileException
+   * @throws DirectoryNotEmptyException
+   * @param path
+   */
+  void delete(Path path) throws NoSuchFileException, DirectoryNotEmptyException;
   InputStream newInputStream(Path path);
   OutputStream newOutputStream(Path path);
 }
