@@ -18,7 +18,9 @@ package ab.usfs;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.SneakyThrows;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -100,6 +102,24 @@ public class Concept {
   public Vector vector(String s) {
     byte[] bytes = digestBit(s);
     return new Vector(s, bytes, radixStr(bytes));
+  }
+
+  @SneakyThrows
+  public Vector vector(long l) {
+    int digestByteSize = digestSize >> 3;
+    int longByteSize = Long.BYTES;
+    ByteBuffer buffer = ByteBuffer.allocate(longByteSize);
+    buffer.putLong(l);
+    byte[] bytes = buffer.array();
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    if (digestByteSize > longByteSize) {
+      stream.write(new byte[digestByteSize - bytes.length]);
+      stream.write(bytes);
+      bytes = stream.toByteArray();
+    } else {
+      bytes = Arrays.copyOfRange(bytes, longByteSize - digestByteSize, longByteSize);
+    }
+    return new Vector(Long.toString(l), bytes, radixStr(bytes));
   }
 
   private String pad(String s, char c) {

@@ -142,4 +142,15 @@ public class ConceptTest {
     Assert.assertEquals("Tue, 15 Nov 1994 12:45:26 GMT", Concept.fromInstantToRfc(rfc7232)); // rfc7232
     Assert.assertEquals(rfc7232, Concept.fromRfcToInstant("Tue, 15 Nov 1994 12:45:26 GMT"));
   }
+
+  @Test
+  public void vectors() { // poor naming
+    assertEquals("170017", Concept.USFS.vector(0xF00F).getStr());
+    assertEquals(2, Concept.USFS.vector(1).getBit().length);
+    assertEquals("00000000000000000000000080123456", Concept.MD5.vector(0x80123456L).getStr());
+    assertEquals(16, Concept.MD5.vector(1).getBit().length);
+    assertEquals("0000000000000000000000000000000000000000000000000000000000000001", Concept.SHA256.vector(1).getStr());
+    assertEquals(32, Concept.SHA256.vector(1).getBit().length);
+  }
+
 }
