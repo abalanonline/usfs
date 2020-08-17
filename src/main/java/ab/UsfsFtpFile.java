@@ -18,6 +18,7 @@ package ab;
 
 import ab.usfs.Path;
 import ab.usfs.Storage;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ftpserver.ftplet.FtpFile;
 
@@ -101,6 +102,7 @@ public class UsfsFtpFile implements FtpFile {
     return storage.createFolder(path) != null;
   }
 
+  @SneakyThrows
   @Override
   public boolean delete() {
     log.debug("delete " + path);
@@ -115,18 +117,21 @@ public class UsfsFtpFile implements FtpFile {
         .collect(Collectors.toList());
   }
 
+  @SneakyThrows
   @Override
   public long getLastModified() {
     log.debug("getLastModified " + path);
     return storage.getLastModifiedInstant(path).toEpochMilli();
   }
 
+  @SneakyThrows
   @Override
   public boolean setLastModified(long ms) {
     log.debug("setLastModified " + path);
     return storage.setLastModifiedInstant(path, Instant.ofEpochMilli(ms)) != null;
   }
 
+  @SneakyThrows
   @Override
   public long getSize() {
     log.debug("getSize " + path);

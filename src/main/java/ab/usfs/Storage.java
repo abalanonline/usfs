@@ -16,6 +16,7 @@
 
 package ab.usfs;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.DirectoryNotEmptyException;
@@ -28,10 +29,10 @@ public interface Storage {
   boolean isFolder(Path path);
   boolean isFile(Path path);
   List<Path> listFiles(Path path);
-  Instant getLastModifiedInstant(Path path);
-  Path setLastModifiedInstant(Path path, Instant instant);
+  Instant getLastModifiedInstant(Path path) throws IOException;
+  Path setLastModifiedInstant(Path path, Instant instant) throws IOException;
   Path createFolder(Path path);
-  long size(Path path); // unspecified for folder
+  long size(Path path) throws IOException; // unspecified for folder
 
   /**
    * Delete file or folder
