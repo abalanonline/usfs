@@ -11,6 +11,7 @@ Octal encoding give file names 000000 - 177777 and excitingly high chance of col
 ## Tests:
 1. small - 799 files, 46 folders, 2.14 MiB - spring-core-4.3.25.RELEASE.jar file content
 1. fat - 30 files, 1 folder, 1 GiB - hi-res pictures, jdk and idea archives
+
 Write (seconds) / Read (after write, presumably cached, seconds) / Delete (seconds)
 
 * file system - s:44/17/19, f:7/4/0
