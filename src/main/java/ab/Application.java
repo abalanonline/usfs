@@ -16,85 +16,97 @@
 
 package ab;
 
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import ab.usfs.DynamoDb;
+import ab.usfs.FileSystem;
+import ab.usfs.GridFs;
+import ab.usfs.Storage;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.mongodb.ConnectionString;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.gridfs.GridFSBucket;
+import com.mongodb.client.gridfs.GridFSBuckets;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.ftpserver.FtpServer;
+import org.apache.ftpserver.FtpServerFactory;
+import org.apache.ftpserver.ftplet.FtpException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
-import java.io.File;
-import java.io.IOException;
-import java.math.BigInteger;
-import java.util.Iterator;
+import java.time.Duration;
+import java.time.Instant;
 
+@Slf4j
 @SpringBootApplication
 public class Application {
 
+  @ConditionalOnProperty("dynamo")
   @Bean
-  public String gridFs() throws IOException {
-    if (true) return "gridFs";
+  public Storage dynamoDb(@Value("${dynamo}") String url) {
+    log.info("Storage: DynamoDB");
+    // Table name: usfs
+    // Primary partition key: pk (Binary)
+    // Primary sort key: sk (Binary)
+    return DynamoDb.mount(new DynamoDB(AmazonDynamoDBClientBuilder.defaultClient()).getTable("usfs"));
+  }
 
-    AmazonDynamoDB client =
-        AmazonDynamoDBClientBuilder.standard()
-//        .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://localhost:8000", "us-west-2"))
-        .build();
+  @ConditionalOnProperty("mongo")
+  @Bean
+  public Storage mongoDb(@Value("${mongo}") String url) {
+    final String mongoUrl = url.startsWith("mongodb://") ? url : "mongodb://localhost:27017/usfs";
+    log.info("Storage: MongoDB, url: " + mongoUrl);
+    ConnectionString connectionString = new ConnectionString(mongoUrl);
+    MongoClient mongoClient = MongoClients.create(connectionString);
+    MongoDatabase mongoDatabase = mongoClient.getDatabase(connectionString.getDatabase());
+    GridFSBucket gridFs = GridFSBuckets.create(mongoDatabase);
+    return GridFs.mount(gridFs);
+  }
 
-    DynamoDB dynamoDB = new DynamoDB(Regions.US_EAST_1);
+  @ConditionalOnProperty("folder")
+  @Bean
+  public Storage fileFolder(@Value("${folder}") String folder) {
+    log.info("Storage: file system, folder: " + folder);
+    return FileSystem.mount(folder);
+  }
 
-    Table table = dynamoDB.getTable("usfs");
+  @ConditionalOnMissingBean
+  @Bean
+  public Storage nullStorage() {
+    log.warn("Storage: not configured, using folder: target");
+    return FileSystem.mount("target");
+  }
 
-    byte[] bytes = new byte[32];
-    for (int i = 0; i < bytes.length; i++) {
-      bytes[i] = (byte) i;
-    }
-    Item item = new Item().withPrimaryKey("pk", BigInteger.valueOf(1).toByteArray(), "sk", bytes).withBinary("b", bytes);
-    String s = item.toJSON();
-    table.putItem(item);
-
-    //TableCollection<ListTablesResult> tables = dynamoDB.listTables();
-
-    JsonParser parser = new JsonFactory().createParser(new File("moviedata.json"));
-
-    JsonNode rootNode = new ObjectMapper().readTree(parser);
-    Iterator<JsonNode> iter = rootNode.iterator();
-
-    ObjectNode currentNode;
-
-    while (iter.hasNext()) {
-      currentNode = (ObjectNode) rootNode;//iter.next();
-
-      int year = currentNode.path("year").asInt();
-      String title = currentNode.path("title").asText();
-
-      try {
-        byte[] a = {1,0,2};
-        table.putItem(new Item().withPrimaryKey("pk", a, "sk", a).withJSON("info",
-            currentNode.path("info").toString()));
-        System.out.println("PutItem succeeded: " + year + " " + title);
-
-      }
-      catch (Exception e) {
-        System.err.println("Unable to add movie: " + year + " " + title);
-        System.err.println(e.getMessage());
-        break;
-      }
-      break;
-    }
-    parser.close();
-    return "gridFs";
+  @Bean
+  public FtpServer ftpServer(@Autowired Storage usfsMedium) throws FtpException {
+    FtpServerFactory factory = new FtpServerFactory();
+    factory.setUserManager(NullUser.MANAGER);
+    factory.setFileSystem(new UsfsFtpStorage(usfsMedium));
+    FtpServer ftpServer = factory.createServer();
+    ftpServer.start();
+    return ftpServer;
   }
 
   public static void main(String[] args) {
     SpringApplication.run(Application.class, args);
+  }
+
+  private static Instant tick = Instant.now();
+  private static Instant tock = Instant.now();
+  public static void tick() { // 11 lines profiler
+    Instant now = Instant.now();
+    if (Duration.between(tick, now).getSeconds() > 5) {
+      log.info("busy " + tock + " - " + tick + " - " + Duration.between(tock, tick).getSeconds() + " s");
+      log.info("idle " + tick + " - " + now);
+      tock = now;
+    }
+    tick = now;
   }
 
 }

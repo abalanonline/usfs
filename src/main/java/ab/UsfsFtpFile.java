@@ -28,6 +28,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static ab.Application.tick;
+
 @Slf4j
 public class UsfsFtpFile implements FtpFile {
 
@@ -37,28 +39,33 @@ public class UsfsFtpFile implements FtpFile {
   public UsfsFtpFile(String path, Storage storage) {
     this.path = Path.getPath(path);
     this.storage = storage;
+    tick();
   }
 
   @Override
   public String getAbsolutePath() {
+    tick();
     log.debug("getAbsolutePath " + path);
     return path.toString();
   }
 
   @Override
   public String getName() {
+    tick();
     log.debug("getName " + path);
     return path.getFileName();
   }
 
   @Override
   public boolean doesExist() {
+    tick();
     log.debug("doesExist " + path);
     return storage.exists(path);
   }
 
   @Override
   public boolean isDirectory() {
+    tick();
     log.debug("isDirectory " + path);
     return storage.isFolder(path);
   }
@@ -70,6 +77,7 @@ public class UsfsFtpFile implements FtpFile {
 
   @Override
   public boolean isFile() {
+    tick();
     log.debug("isFile " + path);
     return storage.isFile(path);
   }
@@ -81,12 +89,14 @@ public class UsfsFtpFile implements FtpFile {
 
   @Override
   public boolean isReadable() {
+    tick();
     log.debug("isReadable " + path);
     return doesExist(); // used for files but folders return true
   }
 
   @Override
   public boolean isWritable() {
+    tick();
     log.debug("isWritable " + path);
     return true; // if does not exist it is writable, existing folders are writable too
   }
@@ -98,6 +108,7 @@ public class UsfsFtpFile implements FtpFile {
 
   @Override
   public boolean mkdir() {
+    tick();
     log.debug("mkdir " + path);
     return storage.createFolder(path) != null;
   }
@@ -105,6 +116,7 @@ public class UsfsFtpFile implements FtpFile {
   @SneakyThrows
   @Override
   public boolean delete() {
+    tick();
     log.debug("delete " + path);
     storage.delete(path);
     return true;
@@ -112,6 +124,7 @@ public class UsfsFtpFile implements FtpFile {
 
   @Override
   public List<? extends FtpFile> listFiles() {
+    tick();
     log.debug("listFiles " + path);
     return storage.listFiles(path).stream().map(path -> new UsfsFtpFile(path.toString(), storage))
         .collect(Collectors.toList());
@@ -120,6 +133,7 @@ public class UsfsFtpFile implements FtpFile {
   @SneakyThrows
   @Override
   public long getLastModified() {
+    tick();
     log.debug("getLastModified " + path);
     return storage.getLastModifiedInstant(path).toEpochMilli();
   }
@@ -127,6 +141,7 @@ public class UsfsFtpFile implements FtpFile {
   @SneakyThrows
   @Override
   public boolean setLastModified(long ms) {
+    tick();
     log.debug("setLastModified " + path);
     return storage.setLastModifiedInstant(path, Instant.ofEpochMilli(ms)) != null;
   }
@@ -134,6 +149,7 @@ public class UsfsFtpFile implements FtpFile {
   @SneakyThrows
   @Override
   public long getSize() {
+    tick();
     log.debug("getSize " + path);
     return storage.size(path);
   }
@@ -152,6 +168,7 @@ public class UsfsFtpFile implements FtpFile {
   public boolean move(FtpFile ftpFile) {
     // this thing is not going to be supported
     log.error("move " + path);
+    tick();
     return false;
   }
 
@@ -159,11 +176,13 @@ public class UsfsFtpFile implements FtpFile {
   public Object getPhysicalFile() {
     // there is no physical file, what should we return? null or exception?
     log.error("getPhysicalFile " + path);
+    tick();
     return null;
   }
 
   @Override
   public OutputStream createOutputStream(long offset) {
+    tick();
     log.debug("createOutputStream " + path);
     if (offset > 0) throw new IllegalStateException("stream with offset is not supported");
     return storage.newOutputStream(path);
@@ -171,6 +190,7 @@ public class UsfsFtpFile implements FtpFile {
 
   @Override
   public InputStream createInputStream(long offset) {
+    tick();
     log.debug("createInputStream " + path);
     if (offset > 0) throw new IllegalStateException("stream with offset is not supported");
     return storage.newInputStream(path);

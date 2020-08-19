@@ -24,6 +24,8 @@ import org.apache.ftpserver.ftplet.FileSystemView;
 import org.apache.ftpserver.ftplet.FtpFile;
 import org.apache.ftpserver.ftplet.User;
 
+import static ab.Application.tick;
+
 @Slf4j
 public class UsfsFtpStorage implements FileSystemFactory, FileSystemView {
 
@@ -51,12 +53,14 @@ public class UsfsFtpStorage implements FileSystemFactory, FileSystemView {
   }
 
   private String resolve(String s) {
+    tick();
     // who can resolve better than native file system?
     return java.nio.file.Paths.get(currentFolder).resolve(s).normalize().toString().replace('\\', '/');
   }
 
   @Override
   public boolean changeWorkingDirectory(String s) {
+    tick();
     String path = resolve(s);
     boolean canChange = storage.isFolder(Path.getPath(path));
     if (canChange) currentFolder = path;
@@ -65,6 +69,7 @@ public class UsfsFtpStorage implements FileSystemFactory, FileSystemView {
 
   @Override
   public FtpFile getFile(String s) {
+    tick();
     return new UsfsFtpFile(resolve(s), storage);
   }
 
