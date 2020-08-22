@@ -19,6 +19,7 @@ package ab;
 import ab.usfs.DynamoDb;
 import ab.usfs.FileSystem;
 import ab.usfs.GridFs;
+import ab.usfs.MongoDb;
 import ab.usfs.Storage;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
@@ -26,8 +27,6 @@ import com.mongodb.ConnectionString;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.gridfs.GridFSBucket;
-import com.mongodb.client.gridfs.GridFSBuckets;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.FtpServerFactory;
@@ -65,8 +64,8 @@ public class Application {
     ConnectionString connectionString = new ConnectionString(mongoUrl);
     MongoClient mongoClient = MongoClients.create(connectionString);
     MongoDatabase mongoDatabase = mongoClient.getDatabase(connectionString.getDatabase());
-    GridFSBucket gridFs = GridFSBuckets.create(mongoDatabase);
-    return GridFs.mount(gridFs);
+//    return GridFs.mount(mongoDatabase);
+    return MongoDb.mount(mongoDatabase);
   }
 
   @ConditionalOnProperty("folder")

@@ -16,7 +16,9 @@
 
 package ab.usfs;
 
+import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.gridfs.GridFSBucket;
+import com.mongodb.client.gridfs.GridFSBuckets;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import com.mongodb.client.gridfs.model.GridFSUploadOptions;
 import lombok.SneakyThrows;
@@ -27,13 +29,9 @@ import org.bson.Document;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-
-import static ab.usfs.Concept.fromInstantToRfc;
 
 public class GridFs implements Storage {
 
@@ -48,17 +46,17 @@ public class GridFs implements Storage {
   private final Concept concept;
 
   @SneakyThrows
-  public GridFs(GridFSBucket bucket, Concept concept) {
+  public GridFs(MongoDatabase mongoDatabase, Concept concept) {
     this.concept = concept;
-    this.bucket = bucket;
+    this.bucket = GridFSBuckets.create(mongoDatabase);
     Path root = new Path("/", concept);
     if (!exists(root)) {
       createFolder(root); // root meta need to be manually created
     }
   }
 
-  public static GridFs mount(GridFSBucket bucket) {
-    return new GridFs(bucket, Concept.USFS);
+  public static GridFs mount(MongoDatabase mongoDatabase) {
+    return new GridFs(mongoDatabase, Concept.USFS);
   }
 
   public String getProperty(Path path, String key) {

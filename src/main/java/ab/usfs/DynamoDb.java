@@ -24,7 +24,6 @@ import com.amazonaws.services.dynamodbv2.document.internal.IteratorSupport;
 import com.amazonaws.services.dynamodbv2.document.spec.DeleteItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
-import com.amazonaws.services.dynamodbv2.document.utils.NameMap;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import lombok.SneakyThrows;
@@ -88,9 +87,8 @@ public class DynamoDb extends AbstractStorage {
 
   @Override
   public List<byte[]> listByte(byte[] pk) throws IOException {
-    QuerySpec querySpec = new QuerySpec().withKeyConditionExpression("#yr = :yyyy")
-        .withNameMap(new NameMap().with("#yr", META_KEY_PK))
-        .withValueMap(new ValueMap().withBinary(":yyyy", pk));
+    QuerySpec querySpec = new QuerySpec().withKeyConditionExpression(META_KEY_PK + " = :pk")
+        .withValueMap(new ValueMap().withBinary(":pk", pk));
     ItemCollection<QueryOutcome> items = table.query(querySpec);
     IteratorSupport<Item, QueryOutcome> iterator = items.iterator();
     List<byte[]> list = new ArrayList<>();
