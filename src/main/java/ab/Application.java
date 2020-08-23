@@ -19,6 +19,7 @@ package ab;
 import ab.usfs.DynamoDb;
 import ab.usfs.FileSystem;
 import ab.usfs.GridFs;
+import ab.usfs.Memory;
 import ab.usfs.MongoDb;
 import ab.usfs.Storage;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
@@ -41,6 +42,7 @@ import org.springframework.context.annotation.Bean;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 
 @Slf4j
 @SpringBootApplication
@@ -77,9 +79,9 @@ public class Application {
 
   @ConditionalOnMissingBean
   @Bean
-  public Storage nullStorage() {
-    log.warn("Storage: not configured, using folder: target");
-    return FileSystem.mount("target");
+  public Storage memoryStorage() {
+    log.warn("Storage: not configured, using memory");
+    return Memory.mount(new HashMap<>());
   }
 
   @Bean

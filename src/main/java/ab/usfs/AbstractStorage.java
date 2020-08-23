@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.NoSuchFileException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,7 +51,8 @@ public abstract class AbstractStorage implements Storage {
   protected int DEFAULT_CHUNKSIZE_BYTES = 255 * 1024; // com.mongodb.client.gridfs.GridFSBucketImpl
 
   /**
-   * @throws FileNotFoundException if not found
+   * @throws NoSuchFileException if not exists
+   * @throws FileNotFoundException if not exists
    */
   abstract public byte[] loadByte(byte[] pk, byte[] sk) throws IOException;
 
@@ -71,6 +74,9 @@ public abstract class AbstractStorage implements Storage {
     return map;
   }
 
+  /**
+   * @throws FileAlreadyExistsException if already exists
+   */
   abstract public void saveByte(byte[] pk, byte[] sk, byte[] b) throws IOException;
 
   public void saveMeta(byte[] pk, byte[] sk, Map<String, String> meta) throws IOException {
@@ -84,6 +90,10 @@ public abstract class AbstractStorage implements Storage {
     }
   }
 
+  /**
+   * @throws NoSuchFileException if not exists
+   * @throws FileNotFoundException if not exists
+   */
   abstract public void deleteByte(byte[] pk, byte[] sk) throws IOException;
 
   abstract public List<byte[]> listByte(byte[] pk) throws IOException;
@@ -97,7 +107,7 @@ public abstract class AbstractStorage implements Storage {
   public boolean exists(Path path) {
     try {
       return loadByte(path.getV1().getBit(), path.getV2().getBit()) != null;
-    } catch (FileNotFoundException e) {
+    } catch (NoSuchFileException | FileNotFoundException e) {
       return false;
     }
   }
@@ -108,7 +118,7 @@ public abstract class AbstractStorage implements Storage {
     try {
       String isFolder = loadMeta(path.getV1().getBit(), path.getV2().getBit()).get(META_KEY_IS_FOLDER);
       return (isFolder != null) && Boolean.parseBoolean(isFolder);
-    } catch (FileNotFoundException e) {
+    } catch (NoSuchFileException | FileNotFoundException e) {
       return false;
     }
   }
@@ -119,7 +129,7 @@ public abstract class AbstractStorage implements Storage {
     try {
       String isFolder = loadMeta(path.getV1().getBit(), path.getV2().getBit()).get(META_KEY_IS_FOLDER);
       return (isFolder != null) && !Boolean.parseBoolean(isFolder);
-    } catch (FileNotFoundException e) {
+    } catch (NoSuchFileException | FileNotFoundException e) {
       return false;
     }
   }
@@ -185,7 +195,7 @@ public abstract class AbstractStorage implements Storage {
       byte[] chunkCountBit = concept.vector(chunkCount).getBit();
       try {
         deleteByte(path.getV3().getBit(), chunkCountBit);
-      } catch (FileNotFoundException e) {
+      } catch (NoSuchFileException | FileNotFoundException e) {
         break;
       }
     }
@@ -225,12 +235,14 @@ public abstract class AbstractStorage implements Storage {
     public GridOutputStream(Path path) {
       this.pk = path.getV3().getBit();
       this.path = path;
-      String key = path.getV3().getStr();
-      if (collision.containsKey(key)) {
-        collisionLogger.debug(key + " - " + collision.get(key));
-        collisionLogger.debug(key + " - " + path);
+      if (collisionLogger.isDebugEnabled()) {
+        String key = path.getV3().getStr();
+        if (collision.containsKey(key)) {
+          collisionLogger.debug(key + " - " + collision.get(key));
+          collisionLogger.debug(key + " - " + path);
+        }
+        collision.put(key, path.toString());
       }
-      collision.put(key, path.toString());
     }
 
     @Override
@@ -259,10 +271,14 @@ public abstract class AbstractStorage implements Storage {
     @Override
     public synchronized void close() throws IOException {
       super.close();
+      if (byteStream == null) {
+        return; // TODO: 2020-08-23 get rid of ByteStream
+      }
       if (byteStream.size() > 0) {
         saveByte(pk, concept.vector(chunkCount).getBit(), byteStream.toByteArray());
       }
       saveMeta(path.getV1().getBit(), path.getV2().getBit(), newMeta(false, path.getFileName(), count, Instant.now()));
+      byteStream = null;
     }
   }
 
@@ -291,7 +307,7 @@ public abstract class AbstractStorage implements Storage {
       if (bytes == null || bytes.length <= count) {
         try {
           bytes = loadByte(pk, concept.vector(chunkCount).getBit());
-        } catch (FileNotFoundException e) {
+        } catch (NoSuchFileException | FileNotFoundException e) {
           return -1;
         }
         chunkCount++;
