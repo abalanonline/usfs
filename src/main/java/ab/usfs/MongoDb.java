@@ -38,6 +38,7 @@ public class MongoDb extends AbstractStorage {
 
   public MongoDb(MongoDatabase mongoDatabase, Concept concept) {
     super(concept);
+    DEFAULT_CHUNKSIZE_BYTES = 16383 * 1024;
     collection = mongoDatabase.getCollection("usfs");
     Path root = new Path("/", concept);
     if (!exists(root)) {

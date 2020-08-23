@@ -18,6 +18,7 @@ package ab.usfs;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -29,6 +30,7 @@ import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -210,6 +212,9 @@ public abstract class AbstractStorage implements Storage {
     return new GridOutputStream(path);
   }
 
+  private static final Logger collisionLogger = org.slf4j.LoggerFactory.getLogger("ab.usfs.Collision");
+  private static Map<String, String> collision = new HashMap<>();
+
   public class GridOutputStream extends OutputStream {
     private final byte[] pk;
     private final Path path;
@@ -220,6 +225,12 @@ public abstract class AbstractStorage implements Storage {
     public GridOutputStream(Path path) {
       this.pk = path.getV3().getBit();
       this.path = path;
+      String key = path.getV3().getStr();
+      if (collision.containsKey(key)) {
+        collisionLogger.debug(key + " - " + collision.get(key));
+        collisionLogger.debug(key + " - " + path);
+      }
+      collision.put(key, path.toString());
     }
 
     @Override
@@ -246,9 +257,11 @@ public abstract class AbstractStorage implements Storage {
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
       super.close();
-      saveByte(pk, concept.vector(chunkCount).getBit(), byteStream.toByteArray());
+      if (byteStream.size() > 0) {
+        saveByte(pk, concept.vector(chunkCount).getBit(), byteStream.toByteArray());
+      }
       saveMeta(path.getV1().getBit(), path.getV2().getBit(), newMeta(false, path.getFileName(), count, Instant.now()));
     }
   }
@@ -274,7 +287,7 @@ public abstract class AbstractStorage implements Storage {
     }
 
     @Override
-    public int read(byte[] b, int off, int len) throws IOException {
+    public synchronized int read(byte[] b, int off, int len) throws IOException {
       if (bytes == null || bytes.length <= count) {
         try {
           bytes = loadByte(pk, concept.vector(chunkCount).getBit());
