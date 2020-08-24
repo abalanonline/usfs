@@ -3,3 +3,4 @@ logging.level.org.apache.ftpserver.impl.PassivePorts: ERROR
 logging.level.org.apache.ftpserver.command.impl: WARN
 #logging.level.ab.UsfsFtpFile: DEBUG
 #logging.level.ab.usfs.Collision: DEBUG
+logging.level.ab.Profiler: DEBUG

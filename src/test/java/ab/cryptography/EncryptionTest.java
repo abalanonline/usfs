@@ -43,9 +43,14 @@ public class EncryptionTest {
     Encryption c1 = new Encryption(password.getBytes());
     Encryption c2 = new Encryption(password.getBytes()); // different object with the same password
     for (String test : STRINGS) {
-      byte[] e = c1.encrypt(test.getBytes(StandardCharsets.UTF_8));
-      assertThat(e.length, greaterThan(test.length()));
-      assertThat(new String(c2.decrypt(e), StandardCharsets.UTF_8), equalTo(test));
+      byte[] testBytes = test.getBytes(StandardCharsets.UTF_8);
+      assertThat(Encryption.NULL.encrypt(testBytes), equalTo(testBytes));
+      assertThat(Encryption.NULL.decrypt(testBytes), equalTo(testBytes));
+
+      byte[] encrypted = c1.encrypt(testBytes);
+      assertThat(encrypted.length, greaterThan(test.length()));
+      assertThat(encrypted, not(equalTo(testBytes)));
+      assertThat(new String(c2.decrypt(encrypted), StandardCharsets.UTF_8), equalTo(test));
     }
 
     assertEquals("fe92a677656fd0167381483f78477fd7", toHexString(new Encryption(new byte[0]).encrypt(new byte[0])));

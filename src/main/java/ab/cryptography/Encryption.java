@@ -23,6 +23,17 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class Encryption {
 
+  public static final Encryption NULL = new Encryption() {
+    @Override
+    public byte[] encrypt(byte[] b) {
+      return b;
+    }
+    @Override
+    public byte[] decrypt(byte[] b) {
+      return b;
+    }
+  };
+
   // https://docs.oracle.com/javase/7/docs/api/javax/crypto/Cipher.html
   // required to support AES/ECB/PKCS5Padding (128)
   public static final String ALGORITHM = "AES";
@@ -32,6 +43,11 @@ public class Encryption {
 
   private final Cipher encryptCipher;
   private final Cipher decryptCipher;
+
+  private Encryption() {
+    encryptCipher = null;
+    decryptCipher = null;
+  }
 
   @SneakyThrows
   public Encryption(byte[] password) {
