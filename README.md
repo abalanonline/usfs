@@ -16,3 +16,5 @@ Write (seconds) / Read (after write, presumably cached, seconds) / Delete (secon
 
 * file system - s:44/17/19, f:7/4/0
 * mongo gridfs - s:204/33/36, f:44/26/1
+* mongo gridusfs - s:213/33/39, f:35/25/1
+* in-memory - s:21/16/16, f:6/3/0

@@ -16,6 +16,7 @@
 
 package ab.usfs;
 
+import ab.cryptography.Digest;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -40,16 +41,16 @@ import java.util.stream.IntStream;
 @AllArgsConstructor
 public class Concept {
 
-  public static final Concept USFS = new Concept(Short.SIZE, 3, "SHA-256");
+  public static final Concept USFS = new Concept(Short.SIZE, 3, Digest.SHA256);
 
-  public static final Concept MD5 = new Concept(128, 4, "MD5");
-  public static final Concept SHA1 = new Concept(160, 4, "SHA-1");
-  public static final Concept SHA256 = new Concept(256, 4, "SHA-256");
+  public static final Concept MD5 = new Concept(128, 4, Digest.MD5);
+  public static final Concept SHA1 = new Concept(160, 4, Digest.SHA1);
+  public static final Concept SHA256 = new Concept(256, 4, Digest.SHA256);
 
   public static final Charset CHARSET = StandardCharsets.UTF_8;
   private final int digestSize;
   private final int radixSize;
-  private final String digestAlgorithm;
+  private final Digest digest;
 
   /**
    * Generate meta name for USFS file name.
@@ -70,18 +71,8 @@ public class Concept {
     return Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(s));
   }
 
-  public static String toLowercaseHexadecimal(byte[] bytes) {
-    return IntStream.range(0, bytes.length).map(i -> bytes[i] & 0xFF).mapToObj(b -> String.format("%02x", b))
-        .collect(Collectors.joining());
-  }
-
   public byte[] digestBit(String s) {
-    try {
-      byte[] bytes = MessageDigest.getInstance(digestAlgorithm).digest(s.getBytes(CHARSET)); // unique MessageDigest.getInstance
-      return Arrays.copyOf(bytes, digestSize >> 3);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException(e); // required to be supported
-    }
+    return digest.digest(s.getBytes(CHARSET), digestSize);
   }
 
   public String radixStr(byte[] bytes) {
