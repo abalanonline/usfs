@@ -48,7 +48,7 @@ public class MongoDb extends AbstractStorage {
   }
 
   @Override
-  public byte[] loadByte(byte[] pk, byte[] sk) throws IOException {
+  public byte[] load(byte[] pk, byte[] sk) throws IOException {
     Document item = collection.find(new Document(META_KEY_ID, concat(pk, sk))).first();
     if (item == null) {
       throw new FileNotFoundException();
@@ -57,21 +57,21 @@ public class MongoDb extends AbstractStorage {
   }
 
   @Override
-  public void saveByte(byte[] pk, byte[] sk, byte[] b) throws IOException {
+  public void save(byte[] pk, byte[] sk, byte[] b) throws IOException {
     collection.insertOne(new Document(META_KEY_ID, concat(pk, sk))
         .append(META_KEY_PK, pk)
         .append(META_KEY_BINARY, b));
   }
 
   @Override
-  public void deleteByte(byte[] pk, byte[] sk) throws IOException {
+  public void delete(byte[] pk, byte[] sk) throws IOException {
     if (collection.deleteOne(new Document(META_KEY_ID, concat(pk, sk))).getDeletedCount() == 0) {
       throw new FileNotFoundException();
     }
   }
 
   @Override
-  public List<byte[]> listByte(byte[] pk) throws IOException {
+  public List<byte[]> list(byte[] pk) throws IOException {
     List<byte[]> list = new ArrayList<>();
     for (Document document : collection.find(new Document(META_KEY_PK, pk))) {
       list.add(document.get(META_KEY_BINARY, Binary.class).getData());

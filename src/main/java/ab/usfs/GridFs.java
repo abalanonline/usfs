@@ -35,6 +35,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+@Deprecated
 public class GridFs implements Storage {
 
   public static final String META_KEY_FILE_NAME = "FileName";

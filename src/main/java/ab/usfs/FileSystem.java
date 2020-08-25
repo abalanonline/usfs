@@ -50,19 +50,19 @@ public class FileSystem extends AbstractStorage {
   }
 
   @Override
-  public byte[] loadByte(byte[] pk, byte[] sk) throws IOException {
+  public byte[] load(byte[] pk, byte[] sk) throws IOException {
     return Files.readAllBytes(path(pk, sk));
   }
 
   @Override
-  public void saveByte(byte[] pk, byte[] sk, byte[] b) throws IOException {
+  public void save(byte[] pk, byte[] sk, byte[] b) throws IOException {
     Path path = path(pk, sk);
     Files.createDirectories(path.getParent());
     Files.write(path, b, StandardOpenOption.CREATE_NEW);
   }
 
   @Override
-  public void deleteByte(byte[] pk, byte[] sk) throws IOException {
+  public void delete(byte[] pk, byte[] sk) throws IOException {
     Files.delete(path(pk, sk));
   }
 
@@ -77,7 +77,7 @@ public class FileSystem extends AbstractStorage {
   }
 
   @Override
-  public List<byte[]> listByte(byte[] pk) throws IOException {
+  public List<byte[]> list(byte[] pk) throws IOException {
     List<byte[]> list = new ArrayList<>();
     try (DirectoryStream<Path> paths = Files.newDirectoryStream(path(pk))) {
       for (Path path : paths) {

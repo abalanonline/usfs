@@ -50,6 +50,25 @@ public abstract class AbstractStorage implements Storage {
   private final Concept concept;
   protected int DEFAULT_CHUNKSIZE_BYTES = 255 * 1024; // com.mongodb.client.gridfs.GridFSBucketImpl
 
+  /**
+   * @throws NoSuchFileException if not exists
+   * @throws FileNotFoundException if not exists
+   */
+  abstract public byte[] load(byte[] pk, byte[] sk) throws IOException;
+
+  /**
+   * @throws FileAlreadyExistsException if already exists
+   */
+  abstract public void save(byte[] pk, byte[] sk, byte[] b) throws IOException;
+
+  /**
+   * @throws NoSuchFileException if not exists
+   * @throws FileNotFoundException if not exists
+   */
+  abstract public void delete(byte[] pk, byte[] sk) throws IOException;
+
+  abstract public List<byte[]> list(byte[] pk) throws IOException;
+
   public byte[] getPk(Path path) {
     return concept.digest(path.getP1());
   }
@@ -62,11 +81,9 @@ public abstract class AbstractStorage implements Storage {
     return concept.digest(path.getP3());
   }
 
-  /**
-   * @throws NoSuchFileException if not exists
-   * @throws FileNotFoundException if not exists
-   */
-  abstract public byte[] loadByte(byte[] pk, byte[] sk) throws IOException;
+  public byte[] loadByte(byte[] pk, byte[] sk) throws IOException {
+    return concept.decrypt(load(pk, sk));
+  }
 
   public Map<String, String> loadMeta(byte[] pk, byte[] sk) throws IOException {
     return loadMeta(loadByte(pk, sk));
@@ -86,10 +103,9 @@ public abstract class AbstractStorage implements Storage {
     return map;
   }
 
-  /**
-   * @throws FileAlreadyExistsException if already exists
-   */
-  abstract public void saveByte(byte[] pk, byte[] sk, byte[] b) throws IOException;
+  public void saveByte(byte[] pk, byte[] sk, byte[] b) throws IOException {
+    save(pk, sk, concept.encrypt(b));
+  }
 
   public void saveMeta(byte[] pk, byte[] sk, Map<String, String> meta) throws IOException {
     Properties properties = new Properties();
@@ -102,13 +118,13 @@ public abstract class AbstractStorage implements Storage {
     }
   }
 
-  /**
-   * @throws NoSuchFileException if not exists
-   * @throws FileNotFoundException if not exists
-   */
-  abstract public void deleteByte(byte[] pk, byte[] sk) throws IOException;
+  public void deleteByte(byte[] pk, byte[] sk) throws IOException {
+    delete(pk, sk);
+  }
 
-  abstract public List<byte[]> listByte(byte[] pk) throws IOException;
+  public List<byte[]> listByte(byte[] pk) throws IOException {
+    return list(pk).stream().map(concept::decrypt).collect(Collectors.toList());
+  }
 
   public List<Map<String, String>> listMeta(byte[] pk) throws IOException {
     return listByte(pk).stream().map(this::loadMeta).collect(Collectors.toList());

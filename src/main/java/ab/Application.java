@@ -19,8 +19,6 @@ package ab;
 import ab.usfs.Concept;
 import ab.usfs.DynamoDb;
 import ab.usfs.FileSystem;
-import ab.usfs.FileSystemV03;
-import ab.usfs.GridFs;
 import ab.usfs.Memory;
 import ab.usfs.MongoDb;
 import ab.usfs.Storage;
@@ -54,7 +52,7 @@ public class Application {
 
   @Bean
   public Concept encryptedConcept() {
-    return Concept.USFS;
+    return Concept.USFS.withPassword("");
   }
 
   @ConditionalOnProperty("dynamo")

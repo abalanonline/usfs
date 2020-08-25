@@ -17,19 +17,20 @@
 package ab.usfs;
 
 import ab.cryptography.Digest;
+import ab.cryptography.Encryption;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-@Getter
+@RequiredArgsConstructor
 @AllArgsConstructor
 public class Concept {
 
-  public static final Concept USFS = new Concept(Short.SIZE, 3, Digest.SHA256);
+  public static final Concept USFS = new Concept(Short.SIZE, 3, Digest.SHA256, Encryption.NULL);
 
   public static final Concept MD5 = new Concept(128, 4, Digest.MD5);
   public static final Concept SHA1 = new Concept(160, 4, Digest.SHA1);
@@ -39,9 +40,20 @@ public class Concept {
   private final int digestSize;
   private final int radixSize;
   private final Digest digest;
+  private Encryption encryption = Encryption.NULL;
 
+  public Concept withPassword(String s) {
+    return new Concept(digestSize, radixSize, digest, new Encryption(s.getBytes(CHARSET)));
+  }
+
+  /**
+   * Provide encrypted digest of file names.
+   */
   public byte[] digest(String s) {
-    return digest.digest(s.getBytes(CHARSET), digestSize);
+    byte[] digest = encrypt(this.digest.digest(s.getBytes(CHARSET)));
+    byte[] result = new byte[digestSize >> 3];
+    System.arraycopy(digest, 0, result, 0, Math.min(digest.length, result.length));
+    return result;
   }
 
   public String radixStr(byte[] bytes) {
@@ -65,12 +77,23 @@ public class Concept {
     return radixStr(digest(s));
   }
 
+  /**
+   * Provide unencrypted bit array representation of file chunk sequences.
+   */
   public byte[] digest(long l) {
     byte[] digest = ByteBuffer.allocate(Long.BYTES).putLong(l).array();
     byte[] result = new byte[digestSize >> 3];
     int min = Math.min(digest.length, result.length);
     System.arraycopy(digest, digest.length - min, result, result.length - min, min);
     return result;
+  }
+
+  public byte[] encrypt(byte[] b) {
+    return encryption.encrypt(b);
+  }
+
+  public byte[] decrypt(byte[] b) {
+    return encryption.decrypt(b);
   }
 
 }

@@ -68,6 +68,10 @@ public class Path {
     return new Path(s);
   }
 
+  public String getParent() {
+    return this.p1;
+  }
+
   public String getFileName() {
     return this.p2;
   }

@@ -42,7 +42,7 @@ public class Memory extends AbstractStorage {
   }
 
   @Override
-  public byte[] loadByte(byte[] pk, byte[] sk) throws IOException {
+  public byte[] load(byte[] pk, byte[] sk) throws IOException {
     byte[] bytes = memory.getOrDefault(new BigInteger(pk), EMPTY_SK).get(new BigInteger(sk));
     if (bytes == null) {
       throw new NoSuchFileException(null); // null is documented
@@ -51,21 +51,21 @@ public class Memory extends AbstractStorage {
   }
 
   @Override
-  public void saveByte(byte[] pk, byte[] sk, byte[] b) throws IOException {
+  public void save(byte[] pk, byte[] sk, byte[] b) throws IOException {
     if (memory.computeIfAbsent(new BigInteger(pk), k -> new HashMap<>()).putIfAbsent(new BigInteger(sk), b) != null) {
       throw new FileAlreadyExistsException(null); // null is documented
     }
   }
 
   @Override
-  public void deleteByte(byte[] pk, byte[] sk) throws IOException {
+  public void delete(byte[] pk, byte[] sk) throws IOException {
     if (memory.getOrDefault(new BigInteger(pk), EMPTY_SK).remove(new BigInteger(sk)) == null) {
       throw new NoSuchFileException(null); // null is documented
     }
   }
 
   @Override
-  public List<byte[]> listByte(byte[] pk) throws IOException {
+  public List<byte[]> list(byte[] pk) throws IOException {
     return new ArrayList<>(memory.getOrDefault(new BigInteger(pk), EMPTY_SK).values());
   }
 }

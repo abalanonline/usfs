@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+@Deprecated
 public class FileSystemV03 implements Storage {
 
   public static final String META_KEY_FILE_NAME = "FileName";

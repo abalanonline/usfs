@@ -51,7 +51,7 @@ public class DynamoDb extends AbstractStorage {
   }
 
   @Override
-  public byte[] loadByte(byte[] pk, byte[] sk) throws IOException {
+  public byte[] load(byte[] pk, byte[] sk) throws IOException {
     GetItemSpec spec = new GetItemSpec().withPrimaryKey(META_KEY_PK, pk, META_KEY_SK, sk);
     Item item = table.getItem(spec);
     if (item == null) {
@@ -61,14 +61,14 @@ public class DynamoDb extends AbstractStorage {
   }
 
   @Override
-  public void saveByte(byte[] pk, byte[] sk, byte[] b) throws IOException {
+  public void save(byte[] pk, byte[] sk, byte[] b) throws IOException {
     table.putItem(new Item()
         .withPrimaryKey(META_KEY_PK, pk, META_KEY_SK, sk)
         .withBinary(META_KEY_BINARY, b));
   }
 
   @Override
-  public void deleteByte(byte[] pk, byte[] sk) throws IOException {
+  public void delete(byte[] pk, byte[] sk) throws IOException {
     try {
       table.deleteItem(new DeleteItemSpec()
           .withPrimaryKey(META_KEY_PK, pk, META_KEY_SK, sk)
@@ -80,7 +80,7 @@ public class DynamoDb extends AbstractStorage {
   }
 
   @Override
-  public List<byte[]> listByte(byte[] pk) throws IOException {
+  public List<byte[]> list(byte[] pk) throws IOException {
     QuerySpec querySpec = new QuerySpec().withKeyConditionExpression(META_KEY_PK + " = :pk")
         .withValueMap(new ValueMap().withBinary(":pk", pk));
     ItemCollection<QueryOutcome> items = table.query(querySpec);
