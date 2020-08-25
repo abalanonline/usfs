@@ -21,21 +21,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 
-import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Getter
 @AllArgsConstructor
@@ -52,103 +41,38 @@ public class Concept {
   private final int radixSize;
   private final Digest digest;
 
-  /**
-   * Generate meta name for USFS file name.
-   * @param fileName
-   * @return null if this file name cannot have meta
-   */
-  public static String v02Meta(String fileName) {
-    if ((fileName == null) || (!fileName.matches(".*\\d\\d\\d\\d[02468]"))) return null;
-    int lastDigit = Integer.parseInt(fileName.substring(fileName.length() - 1));
-    return fileName.substring(0, fileName.length() - 1) + (lastDigit + 1);
-  }
-
-  public static String fromInstantToRfc(Instant instant) {
-    return DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.ofInstant(instant, ZoneOffset.UTC));
-  }
-
-  public static Instant fromRfcToInstant(String s) {
-    return Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(s));
-  }
-
-  public byte[] digestBit(String s) {
+  public byte[] digest(String s) {
     return digest.digest(s.getBytes(CHARSET), digestSize);
   }
 
   public String radixStr(byte[] bytes) {
-    int bits = bytes.length << 3;
     BigInteger bigInteger = new BigInteger(bytes);
-    if ((bigInteger.compareTo(BigInteger.ZERO) < 0)) bigInteger = bigInteger.add(BigInteger.ONE.shiftLeft(bits));
-    return pad(bigInteger.toString(1 << radixSize), '0');
-  }
-
-  public String digestStr(String s) {
-    return radixStr(digestBit(s));
-//    int bits = bytes.length << 3;
-//    BigInteger bigInteger = new BigInteger(bytes);
-//    if ((bigInteger.compareTo(BigInteger.ZERO) < 0)) bigInteger = bigInteger.add(BigInteger.ONE.shiftLeft(bits));
-//    return pad(bigInteger.toString(1 << radixSize), '0');
-  }
-
-  public Vector vector(String s) {
-    byte[] bytes = digestBit(s);
-    return new Vector(s, bytes, radixStr(bytes));
-  }
-
-  @SneakyThrows
-  public Vector vector(long l) {
-    int digestByteSize = digestSize >> 3;
-    int longByteSize = Long.BYTES;
-    ByteBuffer buffer = ByteBuffer.allocate(longByteSize);
-    buffer.putLong(l);
-    byte[] bytes = buffer.array();
-    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    if (digestByteSize > longByteSize) {
-      stream.write(new byte[digestByteSize - bytes.length]);
-      stream.write(bytes);
-      bytes = stream.toByteArray();
-    } else {
-      bytes = Arrays.copyOfRange(bytes, longByteSize - digestByteSize, longByteSize);
+    if ((bigInteger.compareTo(BigInteger.ZERO) < 0)) {
+      bigInteger = bigInteger.add(BigInteger.ONE.shiftLeft(bytes.length << 3));
     }
-    return new Vector(Long.toString(l), bytes, radixStr(bytes));
-  }
-
-  private String pad(String s, char c) {
+    // bigInteger initiated with unsigned bytes
+    String s = bigInteger.toString(1 << radixSize);
+    // string
     int radixSymbols = ((digestSize % radixSize == 0) ? 0 : 1) + (digestSize / radixSize);
     StringBuilder stringBuilder = new StringBuilder(radixSymbols);
     for (int i = s.length(); i < radixSymbols; i++) {
-      stringBuilder.append(c);
+      stringBuilder.append('0');
     }
+    // padded with 0 if shorter than digestSize
     return stringBuilder.append(s).toString();
   }
 
-  public String getFileMask() {
-    return pad("0", '?').replace("0", "[1357]");
+  public String digestStr(String s) {
+    return radixStr(digest(s));
   }
 
-  public UUID stringToUuid(String s) {
-    byte[] digest = digestBit(s);
-    ByteBuffer byteBuffer = ByteBuffer.wrap(digest);
-    long mostSigBits = byteBuffer.getLong();
-    long leastSigBits = byteBuffer.getLong();
-    return new UUID(mostSigBits, leastSigBits);
+  @SneakyThrows
+  public byte[] digest(long l) {
+    byte[] digest = ByteBuffer.allocate(Long.BYTES).putLong(l).array();
+    byte[] result = new byte[digestSize >> 3];
+    int min = Math.min(digest.length, result.length);
+    System.arraycopy(digest, digest.length - min, result, result.length - min, min);
+    return result;
   }
 
-  public int getUnsignedShort(String s) {
-    byte[] b = digestBit(s);
-    return ((b[0] & 0xFF) << 8) | (b[1] & 0xFF); // eww, ByteBuffer was better
-  }
-
-  @AllArgsConstructor
-  @Getter
-  public static class Vector {
-    private final String obj;
-    private final byte[] bit;
-    private final String str;
-
-    @Override
-    public String toString() {
-      return str + " (" + obj + ")";
-    }
-  }
 }

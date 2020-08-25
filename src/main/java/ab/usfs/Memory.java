@@ -16,7 +16,6 @@
 
 package ab.usfs;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.FileAlreadyExistsException;
@@ -36,14 +35,10 @@ public class Memory extends AbstractStorage {
   public Memory(Map<BigInteger, Map<BigInteger, byte[]>> memory, Concept concept) {
     super(concept);
     this.memory = memory;
-    Path root = new Path("/", concept);
+    Path root = new Path("/");
     if (!exists(root)) {
       createFolder(root); // root meta need to be manually created
     }
-  }
-
-  public static Memory mount(Map<BigInteger, Map<BigInteger, byte[]>> memory) {
-    return new Memory(memory, Concept.USFS);
   }
 
   @Override

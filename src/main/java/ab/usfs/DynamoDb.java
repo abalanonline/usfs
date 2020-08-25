@@ -46,14 +46,10 @@ public class DynamoDb extends AbstractStorage {
     super(concept);
     DEFAULT_CHUNKSIZE_BYTES = 399 * 1024;
     this.table = table;
-    Path root = new Path("/", concept);
+    Path root = new Path("/");
     if (!exists(root)) {
       createFolder(root); // root meta need to be manually created
     }
-  }
-
-  public static DynamoDb mount(Table table) {
-    return new DynamoDb(table, Concept.USFS);
   }
 
   @Override

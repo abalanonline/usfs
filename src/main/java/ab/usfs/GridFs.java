@@ -27,6 +27,7 @@ import org.bson.BsonValue;
 import org.bson.Document;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.Instant;
@@ -37,7 +38,6 @@ public class GridFs implements Storage {
 
   public static final String META_KEY_FILE_NAME = "FileName";
   public static final String META_KEY_IS_FOLDER = "IsFolder";
-  public static final String META_KEY_LAST_MODIFIED = "Last-Modified";
   public static final String META_KEY_FILE_ID = "FileId";
   public static final String META_KEY_PATH_ID = "PathId";
   public static final InputStream EMPTY = new ByteArrayInputStream(new byte[0]);
@@ -49,23 +49,26 @@ public class GridFs implements Storage {
   public GridFs(MongoDatabase mongoDatabase, Concept concept) {
     this.concept = concept;
     this.bucket = GridFSBuckets.create(mongoDatabase);
-    Path root = new Path("/", concept);
+    Path root = new Path("/");
     if (!exists(root)) {
       createFolder(root); // root meta need to be manually created
     }
   }
 
-  public static GridFs mount(MongoDatabase mongoDatabase) {
-    return new GridFs(mongoDatabase, Concept.USFS);
+  public byte[] getPk(Path path) {
+    return concept.digest(path.getP1());
   }
 
-  public String getProperty(Path path, String key) {
-    GridFSFile file = getFile(path);
-    Document metadata = (file == null) ? null : file.getMetadata();
-    return metadata == null ? null : metadata.getString(key);
+  public String getPkStr(Path path) {
+    return concept.digestStr(path.getP1());
   }
 
-  public void setProperty(Path path, String... keyvalue) {
+  public byte[] getSk(Path path) {
+    return concept.digest(path.getP2());
+  }
+
+  public String getFpkStr(Path path) {
+    return concept.digestStr(path.getP3());
   }
 
   @SneakyThrows
@@ -95,13 +98,12 @@ public class GridFs implements Storage {
   @Override
   public List<Path> listFiles(Path path) {
     List<Path> list = new ArrayList<>();
-    String usfsFolder = path.toString().equals("/") ? path.toString() : (path.toString() + '/');
-    for (GridFSFile file : bucket.find(new Document("filename", path.getV3().getStr()))) {
+    for (GridFSFile file : bucket.find(new Document("filename", getFpkStr(path)))) {
       String propertyFileName = file.getMetadata().getString(META_KEY_FILE_NAME);
       if (propertyFileName.isEmpty()) {
         continue; // skip empty names in list, they are technical entries
       }
-      list.add(new Path(usfsFolder + propertyFileName, this.concept));
+      list.add(new Path(path.getP3() + '/' + propertyFileName));
     }
     return list;
   }
@@ -116,15 +118,23 @@ public class GridFs implements Storage {
     return path;
   }
 
+  @SneakyThrows
   BsonValue gridFileId(Path path) {
-    return new BsonBinary(path.getB12());
+    byte[] b12;
+    try (ByteArrayOutputStream stream = new ByteArrayOutputStream()) {
+      stream.write(getPk(path));
+      stream.write(getSk(path));
+      b12 = stream.toByteArray();
+    }
+
+    return new BsonBinary(b12);
   }
 
   GridFSUploadOptions metadata(Path path, boolean folder) {
     return new GridFSUploadOptions().metadata(
         new Document(META_KEY_IS_FOLDER, folder)
-            .append(META_KEY_PATH_ID, path.getV1().getBit())
-            .append(META_KEY_FILE_ID, path.getV2().getBit())
+            .append(META_KEY_PATH_ID, getPk(path))
+            .append(META_KEY_FILE_ID, getSk(path))
             .append(META_KEY_FILE_NAME, path.getFileName())
     );
   }
@@ -132,7 +142,7 @@ public class GridFs implements Storage {
   @SneakyThrows
   @Override
   public Path createFolder(Path path) {
-    bucket.uploadFromStream(gridFileId(path), path.getV1().getStr(), EMPTY, metadata(path, true));
+    bucket.uploadFromStream(gridFileId(path), getPkStr(path), EMPTY, metadata(path, true));
     return path;
   }
 
@@ -156,7 +166,7 @@ public class GridFs implements Storage {
   @SneakyThrows
   @Override
   public OutputStream newOutputStream(Path path) {
-    return bucket.openUploadStream(gridFileId(path), path.getV1().getStr(), metadata(path, false));
+    return bucket.openUploadStream(gridFileId(path), getPkStr(path), metadata(path, false));
   }
 
 }

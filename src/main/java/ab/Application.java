@@ -18,7 +18,7 @@ package ab;
 
 import ab.usfs.Concept;
 import ab.usfs.DynamoDb;
-import ab.usfs.FileSystem;
+import ab.usfs.FileSystemV03;
 import ab.usfs.GridFs;
 import ab.usfs.Memory;
 import ab.usfs.MongoDb;
@@ -73,7 +73,7 @@ public class Application {
     ConnectionString connectionString = new ConnectionString(mongoUrl);
     MongoClient mongoClient = MongoClients.create(connectionString);
     MongoDatabase mongoDatabase = mongoClient.getDatabase(connectionString.getDatabase());
-//    return GridFs.mount(mongoDatabase);
+//    return new GridFs(mongoDatabase, concept);
     return new MongoDb(mongoDatabase, concept);
   }
 
@@ -81,7 +81,7 @@ public class Application {
   @Bean
   public Storage fileFolder(@Autowired Concept concept, @Value("${folder}") String folder) {
     log.info("Storage: file system, folder: " + folder);
-    return new FileSystem(folder, concept);
+    return new FileSystemV03(folder, concept);
   }
 
   @ConditionalOnMissingBean

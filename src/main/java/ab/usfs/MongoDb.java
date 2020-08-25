@@ -40,15 +40,11 @@ public class MongoDb extends AbstractStorage {
     super(concept);
     DEFAULT_CHUNKSIZE_BYTES = 16383 * 1024;
     collection = mongoDatabase.getCollection("usfs");
-    Path root = new Path("/", concept);
+    Path root = new Path("/");
     if (!exists(root)) {
       createFolder(root); // root meta need to be manually created
       collection.createIndex(new Document(META_KEY_PK, 1));
     }
-  }
-
-  public static MongoDb mount(MongoDatabase mongoDatabase) {
-    return new MongoDb(mongoDatabase, Concept.USFS);
   }
 
   @Override

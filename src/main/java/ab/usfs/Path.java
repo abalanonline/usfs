@@ -24,27 +24,17 @@ import java.math.BigInteger;
 import java.util.Arrays;
 
 public class Path {
+  // /usr/local/bin/docker
+  // (==== p1 ====) (=p2=)
+  // (======= p3 ========)
 
-  private final String uxPath;
-  private final String uxFolder;
-
+  private final String path;
   @Getter
-  private final String fileName; // getFileName()
-
+  private final String p1;
   @Getter
-  private final String head;
+  private final String p2;
   @Getter
-  private final String body;
-  @Getter
-  private final String foot;
-  @Getter
-  private final Concept.Vector v1;
-  @Getter
-  private final Concept.Vector v2;
-  @Getter
-  private final Concept.Vector v3;
-  @Getter
-  private final byte[] b12;
+  private final String p3;
 
   private boolean isValidPath(String s) {
     char[] invalidChars = {'\\', '\0', '*', '?'};
@@ -69,36 +59,27 @@ public class Path {
   }
 
   @SneakyThrows
-  public Path(String s, Concept concept) {
-    uxPath = s;
-    if (!isValidPath(uxPath)) { // one validation in constructor is enough
-      throw new IllegalArgumentException(uxPath);
+  public Path(String s) {
+    this.path = s;
+    if (!isValidPath(this.path)) { // one validation in constructor is enough
+      throw new IllegalArgumentException(this.path);
     }
-    int index = uxPath.lastIndexOf('/');
-    uxFolder = uxPath.substring(0, index);
-    fileName = uxPath.substring(index + 1);
-    v1 = concept.vector(uxFolder);
-    v2 = concept.vector(fileName);
-    v3 = concept.vector(uxPath.equals("/") ? uxFolder : uxPath);
-    String fileNameHash = v2.getStr();
-    int lastDigit = Integer.parseInt(fileNameHash.substring(fileNameHash.length() - 1)) | 1; // with last bit
-    fileNameHash = fileNameHash.substring(0, fileNameHash.length() - 1);
-    body = '/' + v1.getStr() + '/' + fileNameHash + (lastDigit - 1);
-    head = '/' + v1.getStr() + '/' + fileNameHash + lastDigit;
-    foot = '/' + v3.getStr();
-    try (ByteArrayOutputStream stream = new ByteArrayOutputStream()) {
-      stream.write(v1.getBit());
-      stream.write(v2.getBit());
-      b12 = stream.toByteArray();
-    }
+    int index = this.path.lastIndexOf('/');
+    p1 = this.path.substring(0, index);
+    p2 = this.path.substring(index + 1);
+    p3 = this.path.equals("/") ? "" : this.path;
   }
 
   public static Path getPath(String s) {
-    return new Path(s, Concept.USFS);
+    return new Path(s);
+  }
+
+  public String getFileName() {
+    return this.p2;
   }
 
   @Override
   public String toString() {
-    return uxPath;
+    return this.path;
   }
 }

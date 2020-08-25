@@ -16,6 +16,7 @@
 
 package ab.usfs;
 
+import ab.Rfc7231;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
@@ -49,6 +50,18 @@ public abstract class AbstractStorage implements Storage {
 
   private final Concept concept;
   protected int DEFAULT_CHUNKSIZE_BYTES = 255 * 1024; // com.mongodb.client.gridfs.GridFSBucketImpl
+
+  public byte[] getPk(Path path) {
+    return concept.digest(path.getP1());
+  }
+
+  public byte[] getSk(Path path) {
+    return concept.digest(path.getP2());
+  }
+
+  public byte[] getFpk(Path path) {
+    return concept.digest(path.getP3());
+  }
 
   /**
    * @throws NoSuchFileException if not exists
@@ -106,7 +119,7 @@ public abstract class AbstractStorage implements Storage {
   @Override
   public boolean exists(Path path) {
     try {
-      return loadByte(path.getV1().getBit(), path.getV2().getBit()) != null;
+      return loadByte(getPk(path), getSk(path)) != null;
     } catch (NoSuchFileException | FileNotFoundException e) {
       return false;
     }
@@ -116,7 +129,7 @@ public abstract class AbstractStorage implements Storage {
   @Override
   public boolean isFolder(Path path) {
     try {
-      String isFolder = loadMeta(path.getV1().getBit(), path.getV2().getBit()).get(META_KEY_IS_FOLDER);
+      String isFolder = loadMeta(getPk(path), getSk(path)).get(META_KEY_IS_FOLDER);
       return (isFolder != null) && Boolean.parseBoolean(isFolder);
     } catch (NoSuchFileException | FileNotFoundException e) {
       return false;
@@ -127,7 +140,7 @@ public abstract class AbstractStorage implements Storage {
   @Override
   public boolean isFile(Path path) {
     try {
-      String isFolder = loadMeta(path.getV1().getBit(), path.getV2().getBit()).get(META_KEY_IS_FOLDER);
+      String isFolder = loadMeta(getPk(path), getSk(path)).get(META_KEY_IS_FOLDER);
       return (isFolder != null) && !Boolean.parseBoolean(isFolder);
     } catch (NoSuchFileException | FileNotFoundException e) {
       return false;
@@ -138,22 +151,21 @@ public abstract class AbstractStorage implements Storage {
   @Override
   public List<Path> listFiles(Path path) {
     List<Path> list = new ArrayList<>();
-    String usfsFolder = path.toString().equals("/") ? path.toString() : (path.toString() + '/');
 
-    for (Map<String, String> map : listMeta(path.getV3().getBit())) {
+    for (Map<String, String> map : listMeta(getFpk(path))) {
       String propertyFileName = map.get(META_KEY_FILE_NAME);
       if (propertyFileName == null || propertyFileName.isEmpty()) {
         continue; // skip empty names in list, they are technical entries
       }
-      list.add(new Path(usfsFolder + propertyFileName, concept));
+      list.add(new Path(path.getP3() + '/' + propertyFileName));
     }
     return list;
   }
 
   @Override
   public Instant getLastModifiedInstant(Path path) throws IOException {
-    return Concept.fromRfcToInstant(
-        loadMeta(path.getV1().getBit(), path.getV2().getBit())
+    return Rfc7231.instant(
+        loadMeta(getPk(path), getSk(path))
             .get(META_KEY_LAST_MODIFIED));
   }
 
@@ -167,20 +179,20 @@ public abstract class AbstractStorage implements Storage {
     map.put(META_KEY_IS_FOLDER, Boolean.valueOf(isFolder).toString());
     map.put(META_KEY_FILE_NAME, fileName);
     map.put(META_KEY_CONTENT_LENGTH, Long.toString(contentLength));
-    map.put(META_KEY_LAST_MODIFIED, Concept.fromInstantToRfc(lastModified));
+    map.put(META_KEY_LAST_MODIFIED, Rfc7231.string(lastModified));
     return map;
   }
 
   @SneakyThrows
   @Override
   public Path createFolder(Path path) {
-    saveMeta(path.getV1().getBit(), path.getV2().getBit(), newMeta(true, path.getFileName(), 0L, Instant.now()));
+    saveMeta(getPk(path), getSk(path), newMeta(true, path.getFileName(), 0L, Instant.now()));
     return path;
   }
 
   @Override
   public long size(Path path) throws IOException {
-    Map<String, String> meta = loadMeta(path.getV1().getBit(), path.getV2().getBit());
+    Map<String, String> meta = loadMeta(getPk(path), getSk(path));
     if (Boolean.parseBoolean(meta.get(META_KEY_IS_FOLDER))) { // not null and true
       return 0L;
     }
@@ -190,16 +202,16 @@ public abstract class AbstractStorage implements Storage {
   @SneakyThrows
   @Override
   public void delete(Path path) {
-    deleteByte(path.getV1().getBit(), path.getV2().getBit());
+    deleteByte(getPk(path), getSk(path));
     for (int chunkCount = 0; chunkCount < Integer.MAX_VALUE; chunkCount++) { // delete file chunks, fast
-      byte[] chunkCountBit = concept.vector(chunkCount).getBit();
+      byte[] chunkCountBit = concept.digest(chunkCount);
       try {
-        deleteByte(path.getV3().getBit(), chunkCountBit);
+        deleteByte(getFpk(path), chunkCountBit);
       } catch (NoSuchFileException | FileNotFoundException e) {
         break;
       }
     }
-    // for (listByte(path.getV3().getBit())) // delete file chunks, fail-safe
+    // for (listByte(getFk(path))) // delete file chunks, fail-safe
   }
 
   public byte[] concat(byte[] a, byte[] b) {
@@ -233,10 +245,10 @@ public abstract class AbstractStorage implements Storage {
     private ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
 
     public GridOutputStream(Path path) {
-      this.pk = path.getV3().getBit();
+      this.pk = getFpk(path);
       this.path = path;
       if (collisionLogger.isDebugEnabled()) {
-        String key = path.getV3().getStr();
+        String key = concept.digestStr(path.getP3());
         if (collision.containsKey(key)) {
           collisionLogger.debug(key + " - " + collision.get(key));
           collisionLogger.debug(key + " - " + path);
@@ -260,7 +272,7 @@ public abstract class AbstractStorage implements Storage {
       count += len;
       while (byteStream.size() > DEFAULT_CHUNKSIZE_BYTES) {
         byte[] bytes = byteStream.toByteArray();
-        saveByte(pk, concept.vector(chunkCount).getBit(), Arrays.copyOf(bytes, DEFAULT_CHUNKSIZE_BYTES));
+        saveByte(pk, concept.digest(chunkCount), Arrays.copyOf(bytes, DEFAULT_CHUNKSIZE_BYTES));
         chunkCount++;
         bytes = Arrays.copyOfRange(bytes, DEFAULT_CHUNKSIZE_BYTES, bytes.length);
         byteStream = new ByteArrayOutputStream(bytes.length);
@@ -275,9 +287,9 @@ public abstract class AbstractStorage implements Storage {
         return; // TODO: 2020-08-23 get rid of ByteStream
       }
       if (byteStream.size() > 0) {
-        saveByte(pk, concept.vector(chunkCount).getBit(), byteStream.toByteArray());
+        saveByte(pk, concept.digest(chunkCount), byteStream.toByteArray());
       }
-      saveMeta(path.getV1().getBit(), path.getV2().getBit(), newMeta(false, path.getFileName(), count, Instant.now()));
+      saveMeta(getPk(path), getSk(path), newMeta(false, path.getFileName(), count, Instant.now()));
       byteStream = null;
     }
   }
@@ -289,7 +301,7 @@ public abstract class AbstractStorage implements Storage {
     private byte[] bytes;
 
     public GridInputStream(Path path) {
-      this.pk = path.getV3().getBit();
+      this.pk = getFpk(path);
     }
 
     @Override
@@ -306,7 +318,7 @@ public abstract class AbstractStorage implements Storage {
     public synchronized int read(byte[] b, int off, int len) throws IOException {
       if (bytes == null || bytes.length <= count) {
         try {
-          bytes = loadByte(pk, concept.vector(chunkCount).getBit());
+          bytes = loadByte(pk, concept.digest(chunkCount));
         } catch (NoSuchFileException | FileNotFoundException e) {
           return -1;
         }
