@@ -18,6 +18,7 @@ package ab;
 
 import ab.usfs.Concept;
 import ab.usfs.DynamoDb;
+import ab.usfs.FileSystem;
 import ab.usfs.FileSystemV03;
 import ab.usfs.GridFs;
 import ab.usfs.Memory;
@@ -42,6 +43,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -57,7 +59,7 @@ public class Application {
 
   @ConditionalOnProperty("dynamo")
   @Bean
-  public Storage dynamoDb(@Autowired Concept concept, @Value("${dynamo}") String url) {
+  public Storage dynamoDb(@Autowired Concept concept, @Value("${dynamo}") String url) throws IOException {
     log.info("Storage: DynamoDB");
     // Table name: usfs
     // Primary partition key: pk (Binary)
@@ -67,7 +69,7 @@ public class Application {
 
   @ConditionalOnProperty("mongo")
   @Bean
-  public Storage mongoDb(@Autowired Concept concept, @Value("${mongo}") String url) {
+  public Storage mongoDb(@Autowired Concept concept, @Value("${mongo}") String url) throws IOException {
     final String mongoUrl = url.startsWith("mongodb://") ? url : "mongodb://localhost:27017/usfs";
     log.info("Storage: MongoDB, url: " + mongoUrl);
     ConnectionString connectionString = new ConnectionString(mongoUrl);
@@ -79,14 +81,14 @@ public class Application {
 
   @ConditionalOnProperty("folder")
   @Bean
-  public Storage fileFolder(@Autowired Concept concept, @Value("${folder}") String folder) {
+  public Storage fileFolder(@Autowired Concept concept, @Value("${folder}") String folder) throws IOException {
     log.info("Storage: file system, folder: " + folder);
-    return new FileSystemV03(folder, concept);
+    return new FileSystem(folder, concept);
   }
 
   @ConditionalOnMissingBean
   @Bean
-  public Storage memoryStorage(@Autowired Concept concept) {
+  public Storage memoryStorage(@Autowired Concept concept) throws IOException {
     log.warn("Storage: not configured, using memory");
     return new Memory(new HashMap<>(), concept);
   }

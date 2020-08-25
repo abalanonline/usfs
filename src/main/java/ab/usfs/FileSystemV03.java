@@ -17,10 +17,10 @@
 package ab.usfs;
 
 import ab.Rfc7231;
-import lombok.SneakyThrows;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.DirectoryNotEmptyException;
@@ -42,8 +42,7 @@ public class FileSystemV03 implements Storage {
   private final String mountPoint;
   private final Concept concept;
 
-  @SneakyThrows
-  public FileSystemV03(String s, Concept concept) {
+  public FileSystemV03(String s, Concept concept) throws IOException {
     this.concept = concept;
     mountPoint = s;
     Path root = new Path("/");
@@ -64,8 +63,7 @@ public class FileSystemV03 implements Storage {
     return '/' + concept.digestStr(path.getP3());
   }
 
-  @SneakyThrows
-  private Properties getProperties(String nioPath) {
+  private Properties getProperties(String nioPath) throws IOException {
     Properties properties = new Properties();
     try (FileInputStream stream = new FileInputStream(nioPath)) {
       properties.load(stream);
@@ -73,16 +71,15 @@ public class FileSystemV03 implements Storage {
     return properties;
   }
 
-  public Properties getProperties(Path path) {
+  public Properties getProperties(Path path) throws IOException {
     return getProperties(mountPoint + getHead(path));
   }
 
-  public String getProperty(Path path, String key) {
+  public String getProperty(Path path, String key) throws IOException {
     return getProperties(path).getProperty(key);
   }
 
-  @SneakyThrows
-  public void setProperty(Path path, String... keyvalue) {
+  public void setProperty(Path path, String... keyvalue) throws IOException {
     if (keyvalue.length % 2 != 0) throw new IllegalStateException();
     Properties properties = getProperties(path);
     for (int i = 0; i < keyvalue.length; i+=2) {
@@ -110,9 +107,8 @@ public class FileSystemV03 implements Storage {
     //return exists(path) && !Boolean.parseBoolean(getProperty(path, META_KEY_IS_FOLDER));
   }
 
-  @SneakyThrows
   @Override
-  public List<Path> listFiles(Path path) {
+  public List<Path> listFiles(Path path) throws IOException {
     List<Path> list = new ArrayList<>();
     String nioFolder = mountPoint + getFoot(path);
     try (DirectoryStream<java.nio.file.Path> directoryStream =
@@ -129,19 +125,18 @@ public class FileSystemV03 implements Storage {
   }
 
   @Override
-  public Instant getLastModifiedInstant(Path path) {
+  public Instant getLastModifiedInstant(Path path) throws IOException {
     return Rfc7231.instant(getProperty(path, META_KEY_LAST_MODIFIED));
   }
 
   @Override
-  public Path setLastModifiedInstant(Path path, Instant instant) {
+  public Path setLastModifiedInstant(Path path, Instant instant) throws IOException {
     setProperty(path, META_KEY_LAST_MODIFIED, Rfc7231.string(instant));
     return path;
   }
 
-  @SneakyThrows
   @Override
-  public Path createFolder(Path path) {
+  public Path createFolder(Path path) throws IOException {
     java.nio.file.Path nioFolder = Paths.get(mountPoint + getFoot(path));
     if (!Files.isDirectory(nioFolder)) { // tree balancing
       Files.createDirectory(nioFolder);
@@ -154,9 +149,8 @@ public class FileSystemV03 implements Storage {
     return path;
   }
 
-  @SneakyThrows
   @Override
-  public long size(Path path) {
+  public long size(Path path) throws IOException {
     if (!Files.exists(Paths.get(mountPoint + getHead(path)))) {
       throw new NoSuchFileException(path.toString());
     }
@@ -167,9 +161,8 @@ public class FileSystemV03 implements Storage {
     }
   }
 
-  @SneakyThrows
   @Override
-  public void delete(Path path) {
+  public void delete(Path path) throws IOException {
     if (!exists(path)) {
       throw new NoSuchFileException(path.toString());
     }
@@ -185,15 +178,13 @@ public class FileSystemV03 implements Storage {
     Files.delete(Paths.get(mountPoint + getHead(path)));
   }
 
-  @SneakyThrows
   @Override
-  public InputStream newInputStream(Path path) {
+  public InputStream newInputStream(Path path) throws IOException {
     return Files.newInputStream(Paths.get(mountPoint + getBody(path)));
   }
 
-  @SneakyThrows
   @Override
-  public OutputStream newOutputStream(Path path) {
+  public OutputStream newOutputStream(Path path) throws IOException {
     Files.createFile(Paths.get(mountPoint + getBody(path)));
     Files.createFile(Paths.get(mountPoint + getHead(path)));
     setProperty(path,

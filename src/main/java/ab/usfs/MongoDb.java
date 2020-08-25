@@ -36,7 +36,7 @@ public class MongoDb extends AbstractStorage {
 
   private final MongoCollection<Document> collection;
 
-  public MongoDb(MongoDatabase mongoDatabase, Concept concept) {
+  public MongoDb(MongoDatabase mongoDatabase, Concept concept) throws IOException {
     super(concept);
     DEFAULT_CHUNKSIZE_BYTES = 16383 * 1024;
     collection = mongoDatabase.getCollection("usfs");

@@ -21,15 +21,16 @@ import com.mongodb.client.gridfs.GridFSBucket;
 import com.mongodb.client.gridfs.GridFSBuckets;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import com.mongodb.client.gridfs.model.GridFSUploadOptions;
-import lombok.SneakyThrows;
 import org.bson.BsonBinary;
 import org.bson.BsonValue;
 import org.bson.Document;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +46,6 @@ public class GridFs implements Storage {
   private final GridFSBucket bucket;
   private final Concept concept;
 
-  @SneakyThrows
   public GridFs(MongoDatabase mongoDatabase, Concept concept) {
     this.concept = concept;
     this.bucket = GridFSBuckets.create(mongoDatabase);
@@ -71,7 +71,6 @@ public class GridFs implements Storage {
     return concept.digestStr(path.getP3());
   }
 
-  @SneakyThrows
   @Override
   public boolean exists(Path path) {
     return getFile(path) != null;
@@ -94,7 +93,6 @@ public class GridFs implements Storage {
     return null;
   }
 
-  @SneakyThrows
   @Override
   public List<Path> listFiles(Path path) {
     List<Path> list = new ArrayList<>();
@@ -118,13 +116,14 @@ public class GridFs implements Storage {
     return path;
   }
 
-  @SneakyThrows
   BsonValue gridFileId(Path path) {
     byte[] b12;
     try (ByteArrayOutputStream stream = new ByteArrayOutputStream()) {
       stream.write(getPk(path));
       stream.write(getSk(path));
       b12 = stream.toByteArray();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e); // not expected for ByteArrayOutputStream
     }
 
     return new BsonBinary(b12);
@@ -139,14 +138,12 @@ public class GridFs implements Storage {
     );
   }
 
-  @SneakyThrows
   @Override
   public Path createFolder(Path path) {
     bucket.uploadFromStream(gridFileId(path), getPkStr(path), EMPTY, metadata(path, true));
     return path;
   }
 
-  @SneakyThrows
   @Override
   public long size(Path path) {
     return getFile(path).getLength();
@@ -157,13 +154,11 @@ public class GridFs implements Storage {
     bucket.delete(gridFileId(path));
   }
 
-  @SneakyThrows
   @Override
   public InputStream newInputStream(Path path) {
     return bucket.openDownloadStream(gridFileId(path));
   }
 
-  @SneakyThrows
   @Override
   public OutputStream newOutputStream(Path path) {
     return bucket.openUploadStream(gridFileId(path), getPkStr(path), metadata(path, false));

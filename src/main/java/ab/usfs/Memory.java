@@ -32,7 +32,7 @@ public class Memory extends AbstractStorage {
 
   private final Map<BigInteger, Map<BigInteger, byte[]>> memory;
 
-  public Memory(Map<BigInteger, Map<BigInteger, byte[]>> memory, Concept concept) {
+  public Memory(Map<BigInteger, Map<BigInteger, byte[]>> memory, Concept concept) throws IOException {
     super(concept);
     this.memory = memory;
     Path root = new Path("/");

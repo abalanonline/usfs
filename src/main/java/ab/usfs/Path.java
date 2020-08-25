@@ -17,11 +17,6 @@
 package ab.usfs;
 
 import lombok.Getter;
-import lombok.SneakyThrows;
-
-import java.io.ByteArrayOutputStream;
-import java.math.BigInteger;
-import java.util.Arrays;
 
 public class Path {
   // /usr/local/bin/docker
@@ -58,7 +53,6 @@ public class Path {
     return true;
   }
 
-  @SneakyThrows
   public Path(String s) {
     this.path = s;
     if (!isValidPath(this.path)) { // one validation in constructor is enough

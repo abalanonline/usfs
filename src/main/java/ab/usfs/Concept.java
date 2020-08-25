@@ -19,7 +19,6 @@ package ab.usfs;
 import ab.cryptography.Digest;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.SneakyThrows;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -66,7 +65,6 @@ public class Concept {
     return radixStr(digest(s));
   }
 
-  @SneakyThrows
   public byte[] digest(long l) {
     byte[] digest = ByteBuffer.allocate(Long.BYTES).putLong(l).array();
     byte[] result = new byte[digestSize >> 3];

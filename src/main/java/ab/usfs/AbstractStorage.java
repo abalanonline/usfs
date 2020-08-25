@@ -18,7 +18,6 @@ package ab.usfs;
 
 import ab.Rfc7231;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
@@ -115,17 +114,17 @@ public abstract class AbstractStorage implements Storage {
     return listByte(pk).stream().map(this::loadMeta).collect(Collectors.toList());
   }
 
-  @SneakyThrows
   @Override
   public boolean exists(Path path) {
     try {
       return loadByte(getPk(path), getSk(path)) != null;
     } catch (NoSuchFileException | FileNotFoundException e) {
       return false;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 
-  @SneakyThrows
   @Override
   public boolean isFolder(Path path) {
     try {
@@ -133,10 +132,11 @@ public abstract class AbstractStorage implements Storage {
       return (isFolder != null) && Boolean.parseBoolean(isFolder);
     } catch (NoSuchFileException | FileNotFoundException e) {
       return false;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 
-  @SneakyThrows
   @Override
   public boolean isFile(Path path) {
     try {
@@ -144,12 +144,13 @@ public abstract class AbstractStorage implements Storage {
       return (isFolder != null) && !Boolean.parseBoolean(isFolder);
     } catch (NoSuchFileException | FileNotFoundException e) {
       return false;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 
-  @SneakyThrows
   @Override
-  public List<Path> listFiles(Path path) {
+  public List<Path> listFiles(Path path) throws IOException {
     List<Path> list = new ArrayList<>();
 
     for (Map<String, String> map : listMeta(getFpk(path))) {
@@ -183,9 +184,8 @@ public abstract class AbstractStorage implements Storage {
     return map;
   }
 
-  @SneakyThrows
   @Override
-  public Path createFolder(Path path) {
+  public Path createFolder(Path path) throws IOException {
     saveMeta(getPk(path), getSk(path), newMeta(true, path.getFileName(), 0L, Instant.now()));
     return path;
   }
@@ -199,9 +199,8 @@ public abstract class AbstractStorage implements Storage {
     return Long.parseLong(meta.get(META_KEY_CONTENT_LENGTH)); // not folder and this key is expected
   }
 
-  @SneakyThrows
   @Override
-  public void delete(Path path) {
+  public void delete(Path path) throws IOException {
     deleteByte(getPk(path), getSk(path));
     for (int chunkCount = 0; chunkCount < Integer.MAX_VALUE; chunkCount++) { // delete file chunks, fast
       byte[] chunkCountBit = concept.digest(chunkCount);
@@ -222,13 +221,11 @@ public abstract class AbstractStorage implements Storage {
     return c;
   }
 
-  @SneakyThrows
   @Override
   public InputStream newInputStream(Path path) {
     return new GridInputStream(path);
   }
 
-  @SneakyThrows
   @Override
   public OutputStream newOutputStream(Path path) {
     return new GridOutputStream(path);

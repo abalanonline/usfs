@@ -28,10 +28,10 @@ public interface Storage {
   boolean exists(Path path);
   boolean isFolder(Path path);
   boolean isFile(Path path);
-  List<Path> listFiles(Path path);
+  List<Path> listFiles(Path path) throws IOException;
   Instant getLastModifiedInstant(Path path) throws IOException;
   Path setLastModifiedInstant(Path path, Instant instant) throws IOException;
-  Path createFolder(Path path);
+  Path createFolder(Path path) throws IOException;
   long size(Path path) throws IOException; // unspecified for folder
 
   /**
@@ -40,7 +40,7 @@ public interface Storage {
    * @throws DirectoryNotEmptyException
    * @param path
    */
-  void delete(Path path) throws NoSuchFileException, DirectoryNotEmptyException;
-  InputStream newInputStream(Path path);
-  OutputStream newOutputStream(Path path);
+  void delete(Path path) throws IOException;
+  InputStream newInputStream(Path path) throws IOException;
+  OutputStream newOutputStream(Path path) throws IOException;
 }

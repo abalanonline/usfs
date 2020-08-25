@@ -22,6 +22,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ftpserver.ftplet.FtpFile;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.Instant;
@@ -106,6 +107,7 @@ public class UsfsFtpFile implements FtpFile {
     return doesExist(); // file or folder, if it exists, it can be deleted (removed)
   }
 
+  @SneakyThrows
   @Override
   public boolean mkdir() {
     tick();
@@ -122,6 +124,7 @@ public class UsfsFtpFile implements FtpFile {
     return true;
   }
 
+  @SneakyThrows
   @Override
   public List<? extends FtpFile> listFiles() {
     tick();
@@ -181,7 +184,7 @@ public class UsfsFtpFile implements FtpFile {
   }
 
   @Override
-  public OutputStream createOutputStream(long offset) {
+  public OutputStream createOutputStream(long offset) throws IOException {
     tick();
     log.debug("createOutputStream " + path);
     if (offset > 0) throw new IllegalStateException("stream with offset is not supported");
@@ -189,7 +192,7 @@ public class UsfsFtpFile implements FtpFile {
   }
 
   @Override
-  public InputStream createInputStream(long offset) {
+  public InputStream createInputStream(long offset) throws IOException {
     tick();
     log.debug("createInputStream " + path);
     if (offset > 0) throw new IllegalStateException("stream with offset is not supported");

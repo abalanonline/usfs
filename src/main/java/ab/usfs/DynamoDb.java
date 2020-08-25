@@ -26,7 +26,6 @@ import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
-import lombok.SneakyThrows;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -41,8 +40,7 @@ public class DynamoDb extends AbstractStorage {
 
   private final Table table;
 
-  @SneakyThrows
-  public DynamoDb(Table table, Concept concept) {
+  public DynamoDb(Table table, Concept concept) throws IOException {
     super(concept);
     DEFAULT_CHUNKSIZE_BYTES = 399 * 1024;
     this.table = table;
