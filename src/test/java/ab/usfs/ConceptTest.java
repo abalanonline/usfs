@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import java.security.Security;
 import java.util.Arrays;
+import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 
@@ -68,7 +69,15 @@ public class ConceptTest {
   }
 
   @Test
-  public void digestLong() { // poor naming
+  public void digestPersistence() {
+    String password = UUID.randomUUID().toString();
+    String fileName = UUID.randomUUID().toString();
+    assertEquals(Concept.USFS.withPassword(password).digestStr(fileName),
+        Concept.USFS.withPassword(password).digestStr(fileName));
+  }
+
+  @Test
+  public void digestLong() {
     assertEquals("170017", Concept.USFS.radixStr(Concept.USFS.digest(0xF00F)));
     assertEquals(2, Concept.USFS.digest(1).length);
     assertEquals("00000000000000000000000080123456", Concept.MD5.radixStr(Concept.MD5.digest(0x80123456L)));
