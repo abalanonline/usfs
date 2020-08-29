@@ -16,6 +16,8 @@
 
 package ab;
 
+import ab.ftpserver.Folder;
+import ab.ftpserver.NullUser;
 import ab.usfs.Concept;
 import ab.usfs.DynamoDb;
 import ab.usfs.FileSystem;
@@ -95,7 +97,7 @@ public class Application {
   public FtpServer ftpServer(@Autowired Storage usfsMedium) throws FtpException {
     FtpServerFactory factory = new FtpServerFactory();
     factory.setUserManager(NullUser.MANAGER);
-    factory.setFileSystem(new UsfsFtpStorage(usfsMedium));
+    factory.setFileSystem(new Folder(usfsMedium));
     FtpServer ftpServer = factory.createServer();
     ftpServer.start();
     return ftpServer;

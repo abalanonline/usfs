@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ab;
+package ab.ftpserver;
 
 import ab.usfs.Path;
 import ab.usfs.Storage;
@@ -27,29 +27,29 @@ import org.apache.ftpserver.ftplet.User;
 import static ab.Application.tick;
 
 @Slf4j
-public class UsfsFtpStorage implements FileSystemFactory, FileSystemView {
+public class Folder implements FileSystemFactory, FileSystemView {
 
   private String currentFolder;
   private final Storage storage;
 
-  public UsfsFtpStorage(Storage storage) {
+  public Folder(Storage storage) {
     currentFolder = "/";
     this.storage = storage;
   }
 
   @Override
   public FileSystemView createFileSystemView(User user) {
-    return new UsfsFtpStorage(this.storage);
+    return new Folder(this.storage);
   }
 
   @Override
   public FtpFile getHomeDirectory() {
-    return new UsfsFtpFile("/", storage);
+    return new File("/", storage);
   }
 
   @Override
   public FtpFile getWorkingDirectory() {
-    return new UsfsFtpFile(currentFolder, storage);
+    return new File(currentFolder, storage);
   }
 
   private String resolve(String s) {
@@ -62,15 +62,20 @@ public class UsfsFtpStorage implements FileSystemFactory, FileSystemView {
   public boolean changeWorkingDirectory(String s) {
     tick();
     String path = resolve(s);
-    boolean canChange = storage.isFolder(Path.getPath(path));
-    if (canChange) currentFolder = path;
-    return canChange;
+    try {
+      boolean canChange = storage.isFolder(Path.getPath(path));
+      if (canChange) currentFolder = path;
+      return canChange;
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
   @Override
   public FtpFile getFile(String s) {
     tick();
-    return new UsfsFtpFile(resolve(s), storage);
+    return new File(resolve(s), storage);
   }
 
   @Override

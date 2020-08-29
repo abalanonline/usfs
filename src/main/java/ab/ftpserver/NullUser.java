@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ab;
+package ab.ftpserver;
 
 import org.apache.ftpserver.ftplet.Authentication;
 import org.apache.ftpserver.ftplet.AuthenticationFailedException;

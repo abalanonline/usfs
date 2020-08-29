@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package ab;
+package ab.ftpserver;
 
 import ab.usfs.Path;
 import ab.usfs.Storage;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ftpserver.ftplet.FtpFile;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,12 +32,12 @@ import java.util.stream.Collectors;
 import static ab.Application.tick;
 
 @Slf4j
-public class UsfsFtpFile implements FtpFile {
+public class File implements FtpFile {
 
   private final Path path;
   private final Storage storage;
 
-  public UsfsFtpFile(String path, Storage storage) {
+  public File(String path, Storage storage) {
     this.path = Path.getPath(path);
     this.storage = storage;
     tick();
@@ -61,14 +61,24 @@ public class UsfsFtpFile implements FtpFile {
   public boolean doesExist() {
     tick();
     log.debug("doesExist " + path);
-    return storage.exists(path);
+    try {
+      return storage.exists(path);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
   @Override
   public boolean isDirectory() {
     tick();
     log.debug("isDirectory " + path);
-    return storage.isFolder(path);
+    try {
+      return storage.isFolder(path);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
   @Override
@@ -80,7 +90,12 @@ public class UsfsFtpFile implements FtpFile {
   public boolean isFile() {
     tick();
     log.debug("isFile " + path);
-    return storage.isFile(path);
+    try {
+      return storage.isFile(path);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
   @Override
@@ -107,54 +122,96 @@ public class UsfsFtpFile implements FtpFile {
     return doesExist(); // file or folder, if it exists, it can be deleted (removed)
   }
 
-  @SneakyThrows
   @Override
   public boolean mkdir() {
     tick();
     log.debug("mkdir " + path);
-    return storage.createFolder(path) != null;
+    try {
+      return storage.createFolder(path) != null;
+    } catch (IOException e) {
+      log.debug(e.getMessage(), e);
+      throw new UncheckedIOException(e);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
-  @SneakyThrows
   @Override
   public boolean delete() {
     tick();
     log.debug("delete " + path);
-    storage.delete(path);
+    try {
+      storage.delete(path);
+    } catch (IOException e) {
+      log.debug(e.getMessage(), e);
+      throw new UncheckedIOException(e);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
     return true;
   }
 
-  @SneakyThrows
   @Override
   public List<? extends FtpFile> listFiles() {
     tick();
     log.debug("listFiles " + path);
-    return storage.listFiles(path).stream().map(path -> new UsfsFtpFile(path.toString(), storage))
-        .collect(Collectors.toList());
+    try {
+      return storage.listFiles(path).stream().map(path -> new File(path.toString(), storage))
+          .collect(Collectors.toList());
+    } catch (IOException e) {
+      log.debug(e.getMessage(), e);
+      throw new UncheckedIOException(e);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
-  @SneakyThrows
   @Override
   public long getLastModified() {
     tick();
     log.debug("getLastModified " + path);
-    return storage.getLastModifiedInstant(path).toEpochMilli();
+    try {
+      return storage.getLastModifiedInstant(path).toEpochMilli();
+    } catch (IOException e) {
+      log.debug(e.getMessage(), e);
+      throw new UncheckedIOException(e);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
-  @SneakyThrows
   @Override
   public boolean setLastModified(long ms) {
     tick();
     log.debug("setLastModified " + path);
-    return storage.setLastModifiedInstant(path, Instant.ofEpochMilli(ms)) != null;
+    try {
+      return storage.setLastModifiedInstant(path, Instant.ofEpochMilli(ms)) != null;
+    } catch (IOException e) {
+      log.debug(e.getMessage(), e);
+      throw new UncheckedIOException(e);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
-  @SneakyThrows
   @Override
   public long getSize() {
     tick();
     log.debug("getSize " + path);
-    return storage.size(path);
+    try {
+      return storage.size(path);
+    } catch (IOException e) {
+      log.debug(e.getMessage(), e);
+      throw new UncheckedIOException(e);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
   @Override
@@ -188,7 +245,12 @@ public class UsfsFtpFile implements FtpFile {
     tick();
     log.debug("createOutputStream " + path);
     if (offset > 0) throw new IllegalStateException("stream with offset is not supported");
-    return storage.newOutputStream(path);
+    try {
+      return storage.newOutputStream(path);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
   @Override
@@ -196,7 +258,12 @@ public class UsfsFtpFile implements FtpFile {
     tick();
     log.debug("createInputStream " + path);
     if (offset > 0) throw new IllegalStateException("stream with offset is not supported");
-    return storage.newInputStream(path);
+    try {
+      return storage.newInputStream(path);
+    } catch (Exception e) {
+      log.debug(e.getMessage(), e);
+      throw e;
+    }
   }
 
 }
