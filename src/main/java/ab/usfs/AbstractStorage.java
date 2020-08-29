@@ -181,13 +181,15 @@ public abstract class AbstractStorage implements Storage {
 
   @Override
   public Instant getLastModifiedInstant(Path path) throws IOException {
-    return Rfc7231.instant(
-        loadMeta(getPk(path), getSk(path))
-            .get(META_KEY_LAST_MODIFIED));
+    return Rfc7231.instant(loadMeta(getPk(path), getSk(path)).get(META_KEY_LAST_MODIFIED));
   }
 
   @Override
-  public Path setLastModifiedInstant(Path path, Instant instant) {
+  public Path setLastModifiedInstant(Path path, Instant instant) throws IOException {
+    Map<String, String> meta = loadMeta(getPk(path), getSk(path));
+    meta.put(META_KEY_LAST_MODIFIED, Rfc7231.string(instant));
+    deleteByte(getPk(path), getSk(path));
+    saveMeta(getPk(path), getSk(path), meta);
     return path;
   }
 
@@ -253,9 +255,10 @@ public abstract class AbstractStorage implements Storage {
   public class GridOutputStream extends OutputStream {
     private final byte[] pk;
     private final Path path;
-    private long count;
+    private long fileSize;
     private long chunkCount;
-    private ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    private byte[] buf = new byte[DEFAULT_CHUNKSIZE_BYTES];
+    private int pos = 0; // java.io.ByteArrayInputStream naming
 
     public GridOutputStream(Path path) {
       this.pk = getFpk(path);
@@ -281,37 +284,42 @@ public abstract class AbstractStorage implements Storage {
 
     @Override
     public synchronized void write(byte[] b, int off, int len) throws IOException {
-      byteStream.write(b, off, len);
-      count += len;
-      while (byteStream.size() > DEFAULT_CHUNKSIZE_BYTES) {
-        byte[] bytes = byteStream.toByteArray();
-        saveByte(pk, concept.digest(chunkCount), Arrays.copyOf(bytes, DEFAULT_CHUNKSIZE_BYTES));
-        chunkCount++;
-        bytes = Arrays.copyOfRange(bytes, DEFAULT_CHUNKSIZE_BYTES, bytes.length);
-        byteStream = new ByteArrayOutputStream(bytes.length);
-        byteStream.write(bytes);
+      while (len > 0) {
+        int bytesToCopy = Math.min(DEFAULT_CHUNKSIZE_BYTES - pos, len);
+        System.arraycopy(b, off, buf, pos, bytesToCopy);
+        pos += bytesToCopy;
+        off += bytesToCopy;
+        len -= bytesToCopy;
+        fileSize += bytesToCopy;
+        if (pos >= DEFAULT_CHUNKSIZE_BYTES) {
+          saveByte(pk, concept.digest(chunkCount), buf);
+          buf = new byte[DEFAULT_CHUNKSIZE_BYTES]; // thread-safe
+          pos = 0;
+          chunkCount++;
+        }
       }
     }
 
     @Override
     public synchronized void close() throws IOException {
       super.close();
-      if (byteStream == null) {
-        return; // TODO: 2020-08-23 get rid of ByteStream
+      if (buf == null) {
+        return;
       }
-      if (byteStream.size() > 0) {
-        saveByte(pk, concept.digest(chunkCount), byteStream.toByteArray());
+      if (pos > 0) {
+        saveByte(pk, concept.digest(chunkCount), Arrays.copyOf(buf, pos));
+        pos = 0;
       }
-      saveMeta(getPk(path), getSk(path), newMeta(false, path.getFileName(), count, Instant.now()));
-      byteStream = null;
+      saveMeta(getPk(path), getSk(path), newMeta(false, path.getFileName(), fileSize, Instant.now()));
+      buf = null;
     }
   }
 
   public class GridInputStream extends InputStream {
     private final byte[] pk;
-    private int count;
     private long chunkCount;
-    private byte[] bytes;
+    private byte[] buf;
+    private int pos;
 
     public GridInputStream(Path path) {
       this.pk = getFpk(path);
@@ -329,21 +337,19 @@ public abstract class AbstractStorage implements Storage {
 
     @Override
     public synchronized int read(byte[] b, int off, int len) throws IOException {
-      if (bytes == null || bytes.length <= count) {
+      if (buf == null || pos >= buf.length) {
         try {
-          bytes = loadByte(pk, concept.digest(chunkCount));
+          buf = loadByte(pk, concept.digest(chunkCount));
         } catch (NoSuchFileException | FileNotFoundException e) {
           return -1;
         }
         chunkCount++;
-        count = 0;
+        pos = 0;
       }
-      if (len > bytes.length - count) {
-        len = bytes.length - count;
-      }
-      System.arraycopy(bytes, count, b, off, len);
-      count += len;
-      return len;
+      int bytesToCopy = Math.min(buf.length - pos, len);
+      System.arraycopy(buf, pos, b, off, bytesToCopy);
+      pos += bytesToCopy;
+      return bytesToCopy;
     }
   }
 }
