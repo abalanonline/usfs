@@ -18,3 +18,13 @@ Write (seconds) / Read (after write, presumably cached, seconds) / Delete (secon
 * mongo gridfs - s:204/33/36, f:44/26/1
 * mongo gridusfs - s:213/33/39, f:35/25/1
 * in-memory - s:21/16/16, f:6/3/0
+
+## Usage example:
+```console
+sudo apt install dosfstools
+dd if=/dev/zero of=/tmp/usfs.dos bs=1M count=1200
+sudo mkfs.msdos /tmp/usfs.dos
+mkdir /tmp/usfs
+sudo mount -t msdos -o loop,umask=000,check=s,tz=UTC /tmp/usfs.dos /tmp/usfs
+sudo docker run -d --rm --name usfs -v /tmp/usfs:/mnt -p 21:21 -p 1024:1024 abalanonline/usfs
+```

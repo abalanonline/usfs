@@ -1,0 +1,3 @@
+${AnsiColor.RED}           ___   ___  ___
+    |   | |___  |__  |___
+    |___|  ___| |     ___|  v${application.version}${AnsiColor.DEFAULT}

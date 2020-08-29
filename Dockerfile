@@ -18,5 +18,5 @@ RUN mvn clean package
 
 FROM openjdk:8-alpine
 COPY --from=build /target/usfs.jar /usfs.jar
-EXPOSE 21
+EXPOSE 21 1024
 CMD ["java", "-jar", "/usfs.jar", "--folder=/mnt"]

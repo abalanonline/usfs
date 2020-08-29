@@ -1,6 +1,6 @@
 logging.level.org.apache.ftpserver.listener.nio.FtpLoggingFilter: WARN
 logging.level.org.apache.ftpserver.impl.PassivePorts: ERROR
 logging.level.org.apache.ftpserver.command.impl: WARN
-logging.level.ab.ftpserver: DEBUG
+#logging.level.ab.ftpserver: DEBUG
 #logging.level.ab.usfs.Collision: DEBUG
 #logging.level.ab.Profiler: DEBUG

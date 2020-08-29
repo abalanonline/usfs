@@ -31,9 +31,11 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ftpserver.DataConnectionConfigurationFactory;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.FtpServerFactory;
 import org.apache.ftpserver.ftplet.FtpException;
+import org.apache.ftpserver.listener.ListenerFactory;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -94,8 +96,17 @@ public class Application {
   }
 
   @Bean
+  // sudo docker run --rm --name usfs -v ~:/mnt -p 21:21 -p 1024:1024 -p 5005:5005 openjdk:8-alpine
+  // java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar /mnt/usfs.jar
   public FtpServer ftpServer(@Autowired Storage usfsMedium) throws FtpException {
     FtpServerFactory factory = new FtpServerFactory();
+
+    ListenerFactory listenerFactory = new ListenerFactory();
+    DataConnectionConfigurationFactory dataConnectionConfigurationFactory = new DataConnectionConfigurationFactory();
+    dataConnectionConfigurationFactory.setPassivePorts("1024"); // fixed passive port
+    listenerFactory.setDataConnectionConfiguration(dataConnectionConfigurationFactory.createDataConnectionConfiguration());
+    factory.getListeners().put("default", listenerFactory.createListener());
+
     factory.setUserManager(NullUser.MANAGER);
     factory.setFileSystem(new Folder(usfsMedium));
     FtpServer ftpServer = factory.createServer();
