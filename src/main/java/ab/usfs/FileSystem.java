@@ -28,8 +28,8 @@ import java.util.List;
 
 public class FileSystem extends AbstractStorage {
 
-  private final Concept concept;
-  private final String mountFolder;
+  protected final Concept concept;
+  protected final String mountFolder;
 
   public FileSystem(String mountFolder,  Concept concept) throws IOException {
     super(concept);

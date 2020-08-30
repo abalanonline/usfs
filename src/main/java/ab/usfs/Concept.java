@@ -46,6 +46,10 @@ public class Concept {
     return new Concept(digestSize, radixSize, digest, new Encryption(s.getBytes(CHARSET)));
   }
 
+  public Concept withBitSize(int digestSize, int radixSize) {
+    return new Concept(digestSize, radixSize, digest, encryption);
+  }
+
   /**
    * Provide encrypted digest of file names.
    */
