@@ -20,7 +20,7 @@ import ab.ftpserver.Folder;
 import ab.ftpserver.NullUser;
 import ab.usfs.Concept;
 import ab.usfs.DynamoDb;
-import ab.usfs.FileSystem;
+import ab.usfs.LoveCats;
 import ab.usfs.Memory;
 import ab.usfs.MongoDb;
 import ab.usfs.Storage;
@@ -85,7 +85,7 @@ public class Application {
   @Bean
   public Storage fileFolder(@Autowired Concept concept, @Value("${folder}") String folder) throws IOException {
     log.info("Storage: file system, folder: " + folder);
-    return new FileSystem(folder, concept);
+    return new LoveCats(folder, concept);
   }
 
   @ConditionalOnMissingBean
